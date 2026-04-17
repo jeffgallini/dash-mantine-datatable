@@ -3548,6 +3548,7 @@ def category_divider(title, description, *, category_id=None):
 
 
 app = Dash(__name__, suppress_callback_exceptions=True)
+server = app.server
 app.title = "DashMantineDatatable Demo"
 
 navigation_panel = dmc.Paper(
@@ -5343,4 +5344,4 @@ def update_server_table(search_value, page, records_per_page, sort_status):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
