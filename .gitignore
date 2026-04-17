@@ -23,3 +23,4 @@ venv/
 *.log
 *.py[cod]
 *.tgz
+.pypirc
