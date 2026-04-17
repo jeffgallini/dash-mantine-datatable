@@ -3,3 +3,4 @@ dash-mantine-components>=2.6.0
 dash-iconify
 build>=1.2.2
 twine>=6.0.1
+gunicorn
