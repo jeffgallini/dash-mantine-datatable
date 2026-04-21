@@ -228,6 +228,43 @@ def _with_rule(prop_name: str, current: Any, value: Any, selector: Any) -> Any:
 
 
 def Column(accessor: str | None = None, /, **kwargs: Any) -> dict[str, Any]:
+    """
+    Build a column-definition dictionary for `DataTable`.
+
+    Parameters
+    ----------
+    accessor : str, optional
+        Record key rendered by the column.
+    **kwargs
+        Additional column properties.
+
+        Commonly used keyword arguments include:
+
+        - `title`
+        - `presentation`
+        - `sortable`
+        - `width`
+        - `textAlign`
+        - `render`
+        - `editable`
+        - `editor`
+        - `filter`
+        - `cellsStyle`
+        - `titleStyle`
+        - `draggable`
+        - `toggleable`
+        - `resizable`
+
+    Returns
+    -------
+    dict
+        A Dash-safe column configuration dictionary.
+
+    Examples
+    --------
+    >>> Column("salary", title="Salary", presentation="currency", currency="USD")
+    {'accessor': 'salary', 'title': 'Salary', 'presentation': 'currency', 'currency': 'USD'}
+    """
     column = {}
     if accessor is not None:
         column["accessor"] = accessor
@@ -243,6 +280,26 @@ def ColumnGroup(
     groups: list[dict[str, Any]] | None = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
+    """
+    Build a grouped-header definition for `DataTable`.
+
+    Parameters
+    ----------
+    group_id : str, optional
+        Stable identifier for the group.
+    columns : list, optional
+        Column references or column dictionaries attached to the group.
+    groups : list of dict, optional
+        Nested child groups for multi-row grouped headers.
+    **kwargs
+        Additional group properties such as `title`, `style`, or
+        `headerStyle`.
+
+    Returns
+    -------
+    dict
+        A grouped-header configuration dictionary.
+    """
     group = {}
     if group_id is not None:
         group["id"] = group_id
@@ -255,14 +312,88 @@ def ColumnGroup(
 
 
 def SelectionConfig(**kwargs: Any) -> dict[str, Any]:
+    """
+    Build a compact selection-configuration dictionary.
+
+    Parameters
+    ----------
+    **kwargs
+        Selection properties to forward to `DataTable`.
+
+        Commonly used keyword arguments include:
+
+        - `selectionTrigger`
+        - `selectedRecordIds`
+        - `selectedRecords`
+        - `selectableRowRules`
+        - `disabledSelectionRowRules`
+        - `selectionCheckboxRules`
+        - `selectionCheckboxProps`
+        - `allRecordsSelectionCheckboxProps`
+        - `selectionColumnClassName`
+        - `selectionColumnStyle`
+
+    Returns
+    -------
+    dict
+        A dictionary with `None` values removed.
+    """
     return _compact_mapping(deepcopy(kwargs))
 
 
 def PaginationConfig(**kwargs: Any) -> dict[str, Any]:
+    """
+    Build a compact pagination-configuration dictionary.
+
+    Parameters
+    ----------
+    **kwargs
+        Pagination properties to forward to `DataTable`.
+
+        Commonly used keyword arguments include:
+
+        - `page`
+        - `pageSize`
+        - `recordsPerPage`
+        - `totalRecords`
+        - `recordsPerPageOptions`
+        - `pageSizeOptions`
+        - `recordsPerPageLabel`
+        - `paginationSize`
+        - `paginationActiveTextColor`
+        - `paginationActiveBackgroundColor`
+        - `paginationWithEdges`
+        - `paginationWithControls`
+
+    Returns
+    -------
+    dict
+        A dictionary with `None` values removed.
+    """
     return _compact_mapping(deepcopy(kwargs))
 
 
 def RowExpansionConfig(content: Any = None, /, **kwargs: Any) -> dict[str, Any]:
+    """
+    Build a row-expansion configuration dictionary.
+
+    Parameters
+    ----------
+    content : Any, optional
+        Expansion content rendered when a row opens.
+    **kwargs
+        Additional row-expansion options.
+
+        Commonly used keyword arguments include:
+
+        - `allowMultiple`
+        - `trigger`
+
+    Returns
+    -------
+    dict
+        A dictionary with `None` values removed.
+    """
     config = deepcopy(kwargs)
     if content is not None:
         config["content"] = content
@@ -270,7 +401,130 @@ def RowExpansionConfig(content: Any = None, /, **kwargs: Any) -> dict[str, Any]:
 
 
 class DataTable(_GeneratedDataTable):
-    """Dash Mantine DataTable wrapper with chainable Python-side helpers."""
+    """
+    Declarative Dash table component with chainable Python-side configuration helpers.
+
+    `DataTable` extends the generated Dash component with a fluent API for
+    updating layout, columns, grouping, row rules, selection, pagination,
+    sorting, and search settings after construction. It also accepts a small
+    set of Python-friendly aliases such as `records` for `data`,
+    `group_by` for `groupBy`, and `dir` for `direction`.
+
+    Parameters
+    ----------
+    *args
+        Positional arguments forwarded to the generated Dash component.
+    **kwargs
+        Component properties forwarded to the underlying Dash component after
+        alias normalization.
+
+        Commonly used functionality-driven properties include:
+
+        - `data` : sequence of dict, optional
+          Table records rendered by the component.
+        - `columns` : sequence of dict, optional
+          Column definitions. Each item typically includes an `accessor` key.
+        - `groups` : sequence of dict, optional
+          Column-group definitions for grouped headers.
+        - `groupBy` : str or sequence of str, optional
+          Accessor or accessors used to group rows.
+        - `paginationMode` : {"client", "server", "none"}, default "client"
+          Pagination strategy.
+        - `sortMode` : {"client", "server"}, default "client"
+          Sorting strategy.
+        - `searchMode` : {"client", "server"}, default "client"
+          Search strategy.
+        - `rowExpansion` : dict, optional
+          Configuration for row-expansion content.
+        - `rowDragging` : bool or dict, optional
+          Enables drag-and-drop row reordering.
+        - `selectionTrigger` : {"cell", "checkbox"}, optional
+          Enables row selection via clicks or checkboxes.
+        - `selectedRecordIds` : sequence, optional
+          Controlled selection state.
+        - `sortStatus` : dict, optional
+          Controlled sorting descriptor.
+        - `searchQuery` : str, optional
+          Controlled search text.
+        - `page`, `pageSize`, `recordsPerPage`, `totalRecords`
+          Common controlled pagination props.
+        - `striped`, `withTableBorder`, `withColumnBorders`, `stickyHeader`
+          Frequently used presentation props.
+        - `height`, `minHeight`, `maxHeight`
+          Common sizing props for scrollable layouts.
+        - `emptyState`, `customLoader`, `noRecordsIcon`
+          Built-in state customization props.
+        - `storeColumnsKey`
+          Persists draggable, toggleable, or resizable column state.
+
+        Commonly used style-driven properties include:
+
+        - `radius`
+          Rounded-corner setting for the table container.
+        - `withTableBorder`, `withColumnBorders`, `withRowBorders`
+          Border controls for the outer table and internal grid lines.
+        - `striped`, `highlightOnHover`
+          High-value row presentation toggles.
+        - `height`, `minHeight`, `maxHeight`
+          Common sizing props for constrained layouts and scrolling regions.
+        - `horizontalSpacing`, `verticalSpacing`, `verticalAlign`
+          Cell spacing and alignment controls.
+        - `bg`, `c`, `backgroundColor`, `borderColor`
+          Mantine and explicit color props for the table container.
+        - `style`, `styles`, `className`, `classNames`, `tableClassName`
+          Root and internal style/class customization hooks.
+
+    Attributes
+    ----------
+    data : list of dict
+        Records rendered by the table. `records` is normalized into this
+        property during initialization.
+    columns : list of dict
+        Column configuration currently attached to the table.
+    groups : list of dict or None
+        Column-group configuration for grouped headers.
+    groupBy : str or list of str or None
+        Active row-grouping accessor or accessors.
+    idAccessor : str or dict or list of str
+        Record identity accessor used by selection, expansion, and row rules.
+    selectedRecordIds : list
+        Selected record identifiers.
+    selectedRecords : list
+        Selected record payloads mirrored from the front end.
+    expandedRecordIds : list
+        Expanded row identifiers for `rowExpansion` or grouped child rows.
+    sortStatus : dict or None
+        Current sort descriptor used by client-side or server-side sorting.
+    searchQuery : str or None
+        Current table search query.
+    pagination : dict or None
+        Pagination event payload reported by the component.
+    lastSortChange : dict or None
+        Latest sort interaction payload emitted by the component.
+    lastSelectionChange : dict or None
+        Latest selection interaction payload emitted by the component.
+    lastExpansionChange : dict or None
+        Latest expansion interaction payload emitted by the component.
+    lastRowDragChange : dict or None
+        Latest row-drag interaction payload emitted by the component.
+
+    Notes
+    -----
+    Mapping-style properties such as `style`, `styles`, `classNames`,
+    `tableProps`, and `scrollAreaProps` are merged when updated through the
+    fluent helpers instead of being blindly replaced.
+
+    Examples
+    --------
+    >>> table = DataTable(
+    ...     data=[{"id": 1, "name": "Avery", "team": "Platform"}],
+    ...     columns=[{"accessor": "name"}, {"accessor": "team"}],
+    ... )
+    >>> table.update_columns(selector="name", title="Employee")
+    DataTable(...)
+    >>> table.update_rows(selector={"team": "Platform"}, className="team-platform")
+    DataTable(...)
+    """
 
     _base_nodes = tuple(
         sorted(set(getattr(_GeneratedDataTable, "_base_nodes", ())) | set(_EXTRA_BASE_NODES))
@@ -285,10 +539,47 @@ class DataTable(_GeneratedDataTable):
     _css_dist = _css_dist
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialize a `DataTable` and normalize Python-side property aliases.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to the generated Dash component.
+        **kwargs
+            Component properties. Common aliases include `records`,
+            `group_by`, `group_aggregations`, `child_rows_accessor`, and
+            `dir`.
+
+        Notes
+        -----
+        Alias normalization happens before the generated component
+        constructor runs, so the stored properties always use the canonical
+        Dash names.
+        """
         normalized = _normalize_kwargs(kwargs)
         super().__init__(*args, **normalized)
 
     def _update_props(self, **kwargs: Any) -> "DataTable":
+        """
+        Update component properties in place.
+
+        Parameters
+        ----------
+        **kwargs
+            Properties to update. Known aliases are normalized before the
+            update is applied.
+
+        Returns
+        -------
+        DataTable
+            The current instance, enabling method chaining.
+
+        Notes
+        -----
+        Dictionary-like properties listed in `_MERGED_MAPPING_PROPS` are
+        merged recursively with existing values.
+        """
         normalized = _normalize_kwargs(kwargs)
         for key, value in normalized.items():
             current = getattr(self, key, None)
@@ -299,9 +590,77 @@ class DataTable(_GeneratedDataTable):
         return self
 
     def update_layout(self, **kwargs: Any) -> "DataTable":
+        """
+        Update high-level layout and presentation properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Layout-oriented component properties such as `style`,
+            `className`, `direction`, `tableProps`, spacing, sizing, or
+            Mantine style props.
+
+            Commonly used keyword arguments include:
+
+            - `radius`
+            - `withTableBorder`
+            - `withColumnBorders`
+            - `striped`
+            - `direction`
+            - `height`
+            - `minHeight`
+            - `maxHeight`
+            - `bg`
+            - `textSelectionDisabled`
+            - `pinFirstColumn`
+            - `pinLastColumn`
+            - `loadingText`
+            - `loaderType`
+            - `loaderColor`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+        """
         return self._update_props(**kwargs)
 
     def update_table_properties(self, **kwargs: Any) -> "DataTable":
+        """
+        Update table behavior and styling properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Table properties such as borders, spacing, striped rows,
+            hover highlighting, pagination appearance, or default column
+            settings.
+
+            Commonly used keyword arguments include:
+
+            - `withRowBorders`
+            - `withTableBorder`
+            - `withColumnBorders`
+            - `horizontalSpacing`
+            - `verticalSpacing`
+            - `verticalAlign`
+            - `striped`
+            - `highlightOnHover`
+            - `stickyHeader`
+            - `stickyHeaderOffset`
+            - `defaultColumnProps`
+            - `paginationSize`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        This is an alias of :meth:`update_layout`, kept for readability in
+        fluent chains.
+        """
         return self._update_props(**kwargs)
 
     def update_columns(
@@ -311,6 +670,61 @@ class DataTable(_GeneratedDataTable):
         overwrite: bool = False,
         **kwargs: Any,
     ) -> "DataTable":
+        """
+        Add, replace, or merge column definitions.
+
+        Parameters
+        ----------
+        *columns
+            Column definitions to add or update. Each item may be an accessor
+            string or a column dictionary.
+        selector : Any, optional
+            Column accessor, or collection of accessors, identifying which
+            existing columns should be updated. When omitted, incoming column
+            definitions target their own `accessor` values.
+        overwrite : bool, default False
+            If `True`, replace matching columns instead of merging into the
+            existing definitions.
+        **kwargs
+            Column properties to merge into the selected columns.
+
+            Commonly used keyword arguments include:
+
+            - `title`
+            - `width`
+            - `presentation`
+            - `textAlign`
+            - `sortable`
+            - `ellipsis`
+            - `cellsStyle`
+            - `titleStyle`
+            - `render`
+            - `editable`
+            - `editor`
+            - `filter`
+            - `filtering`
+            - `draggable`
+            - `toggleable`
+            - `resizable`
+            - `defaultToggle`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        Nested mapping properties such as `style`, `titleStyle`, and
+        `cellsStyle` are merged recursively for matching columns.
+
+        Examples
+        --------
+        >>> table.update_columns(selector="salary", title="Annual salary", width=140)
+        DataTable(...)
+        >>> table.update_columns({"accessor": "location", "hidden": True})
+        DataTable(...)
+        """
         current_columns = [
             _normalize_column(column) for column in (getattr(self, "columns", None) or [])
         ]
@@ -359,6 +773,38 @@ class DataTable(_GeneratedDataTable):
         selector: Any = None,
         **kwargs: Any,
     ) -> "DataTable":
+        """
+        Create or update grouped column headers.
+
+        Parameters
+        ----------
+        *groups
+            Group definitions to append or apply to existing groups.
+        selector : Any, optional
+            Group id, or collection of ids, used to target existing groups.
+        **kwargs
+            Group properties to merge into the selected groups. `columns` and
+            nested `groups` are resolved against the current column
+            definitions when possible.
+
+            Commonly used keyword arguments include:
+
+            - `title`
+            - `columns`
+            - `groups`
+            - `style`
+            - `textAlign`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Examples
+        --------
+        >>> table.group_columns({"id": "profile", "columns": ["name", "team"]})
+        DataTable(...)
+        """
         existing_columns = [
             _normalize_column(column) for column in (getattr(self, "columns", None) or [])
         ]
@@ -395,6 +841,57 @@ class DataTable(_GeneratedDataTable):
         return self
 
     def update_rows(self, selector: Any = None, **kwargs: Any) -> "DataTable":
+        """
+        Update row-level styling, metadata, selection helpers, or expansion.
+
+        Parameters
+        ----------
+        selector : Any, optional
+            Row selector used for conditional rules. This is typically a
+            mapping of record fields to match, but any Dash-safe selector
+            payload supported by the front end may be used.
+        **kwargs
+            Row-related properties to update.
+
+            Common aliases include:
+
+            - `color` -> `rowColor`
+            - `backgroundColor` -> `rowBackgroundColor`
+            - `className` -> `rowClassName`
+            - `style` -> `rowStyle`
+            - `attributes` -> `rowAttributes`
+            - `draggable` -> `rowDragging`
+
+            Commonly used keyword arguments include:
+
+            - `rowColor` or `color`
+            - `rowBackgroundColor` or `backgroundColor`
+            - `rowClassName` or `className`
+            - `rowStyle` or `style`
+            - `rowAttributes` or `attributes`
+            - `rowDragging` or `draggable`
+            - `idAccessor`
+            - `expandedRecordIds`
+            - `rowExpansion`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Raises
+        ------
+        TypeError
+            If both a canonical row property and its alias are supplied, or if
+            table-level properties such as `rowDragging` / `rowExpansion` are
+            combined with a selector.
+
+        Notes
+        -----
+        Conditional row props are stored as Dash-safe rule objects of the form
+        `{"selector": ..., "value": ...}`. Unconditional updates overwrite
+        static row props unless the property supports rule accumulation.
+        """
         for alias, canonical in _ROW_PROP_ALIASES.items():
             if alias in kwargs and canonical in kwargs:
                 raise TypeError(f"Pass either {canonical} or {alias}, not both.")
@@ -443,6 +940,30 @@ class DataTable(_GeneratedDataTable):
         cellContextMenu: bool = False,
         cellSelector: Any = None,
     ) -> "DataTable":
+        """
+        Enable common row or cell interaction affordances.
+
+        Parameters
+        ----------
+        rowClick, rowDoubleClick, rowContextMenu : bool, default False
+            When enabled, turn on pointer-cursor row styling and disable text
+            selection so rows feel interactive.
+        cellClick, cellDoubleClick, cellContextMenu : bool, default False
+            When enabled, apply pointer-cursor styling to cells.
+        cellSelector : Any, optional
+            Column selector limiting which cells receive interactive cursor
+            styling. When omitted, all current columns are targeted.
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        This helper configures presentation only. It does not register Dash
+        callbacks by itself.
+        """
         if rowClick or rowDoubleClick or rowContextMenu:
             if getattr(self, "highlightOnHover", None) is None:
                 self.highlightOnHover = True
@@ -460,23 +981,137 @@ class DataTable(_GeneratedDataTable):
         return self
 
     def update_selection(self, **kwargs: Any) -> "DataTable":
+        """
+        Update selection-related properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Selection properties such as `selectedRecordIds`,
+            `selectedRecords`, `selectionTrigger`, or selection rule props.
+
+            Commonly used keyword arguments include:
+
+            - `selectionTrigger`
+            - `selectedRecordIds`
+            - `selectedRecords`
+            - `selectableRowRules`
+            - `disabledSelectionRowRules`
+            - `selectionCheckboxRules`
+            - `selectionCheckboxProps`
+            - `allRecordsSelectionCheckboxProps`
+            - `selectionColumnClassName`
+            - `selectionColumnStyle`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+        """
         return self._update_props(**kwargs)
 
     def update_pagination(self, **kwargs: Any) -> "DataTable":
+        """
+        Update pagination-related properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Pagination properties such as `page`, `pageSize`,
+            `recordsPerPage`, `totalRecords`, or pagination display options.
+
+            Commonly used keyword arguments include:
+
+            - `page`
+            - `pageSize`
+            - `recordsPerPage`
+            - `totalRecords`
+            - `recordsPerPageOptions`
+            - `pageSizeOptions`
+            - `recordsPerPageLabel`
+            - `paginationSize`
+            - `paginationActiveTextColor`
+            - `paginationActiveBackgroundColor`
+            - `paginationWithEdges`
+            - `paginationWithControls`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+        """
         return self._update_props(**kwargs)
 
     def update_sorting(self, **kwargs: Any) -> "DataTable":
+        """
+        Update sorting-related properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Sorting properties such as `sortStatus`, `sortMode`, or
+            `sortIcons`.
+
+            Commonly used keyword arguments include:
+
+            - `sortStatus`
+            - `sortMode`
+            - `sortIcons`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+        """
         return self._update_props(**kwargs)
 
     def update_search(self, **kwargs: Any) -> "DataTable":
+        """
+        Update search-related properties.
+
+        Parameters
+        ----------
+        **kwargs
+            Search properties such as `searchQuery`, `searchMode`, or
+            `searchableAccessors`.
+
+            Commonly used keyword arguments include:
+
+            - `searchQuery`
+            - `searchMode`
+            - `searchableAccessors`
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+        """
         return self._update_props(**kwargs)
 
     def clear_selection(self) -> "DataTable":
+        """
+        Clear all selected rows.
+
+        Returns
+        -------
+        DataTable
+            The current instance with `selectedRecordIds` and
+            `selectedRecords` reset to empty lists.
+        """
         self.selectedRecordIds = []
         self.selectedRecords = []
         return self
 
     def clear_expansion(self) -> "DataTable":
+        """
+        Collapse all expanded rows.
+
+        Returns
+        -------
+        DataTable
+            The current instance with `expandedRecordIds` reset to an empty
+            list.
+        """
         self.expandedRecordIds = []
         return self
 

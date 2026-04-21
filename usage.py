@@ -7,15 +7,23 @@ such as callback payloads, selector rules, chainable update helpers, and
 component-based templates.
 """
 
+import ast
 import json
 import os
+import re
 from copy import deepcopy
 from datetime import date, datetime
+from pathlib import Path
 
 import dash_mantine_components as dmc
 import dash_mantine_datatable as dmdt
 from dash import ALL, Dash, Input, Output, State, callback, callback_context, dcc, html, no_update
 from dash_iconify import DashIconify as _DashIconifyComponent
+
+try:
+    import yfinance as yf
+except ImportError:  # pragma: no cover - optional demo dependency
+    yf = None
 
 
 USE_LIVE_ICONIFY = os.environ.get("DMDT_USAGE_ENABLE_ICONIFY", "").strip() == "1"
@@ -544,6 +552,142 @@ COLUMN_FILTERING_DEFAULT_SCORE_RANGE = [
     min(record["deliveryScore"] for record in EMPLOYEES),
     max(record["deliveryScore"] for record in EMPLOYEES),
 ]
+STOCK_PORTFOLIO_DEFAULT_TICKERS = ["GME", "SHEL", "AAPL", "MARA", "KO", "JPM"]
+STOCK_PORTFOLIO_HISTORY_PERIOD = "3mo"
+
+
+def normalize_stock_ticker(value):
+    return str(value or "").strip().upper()
+
+
+def coerce_numeric(value):
+    try:
+        if value in (None, "", "nan"):
+            return None
+        return round(float(value), 2)
+    except (TypeError, ValueError):
+        return None
+
+
+def build_stock_portfolio_placeholder_record(ticker_symbol, row_id):
+    symbol = normalize_stock_ticker(ticker_symbol)
+    return {
+        "id": row_id,
+        "ticker": symbol,
+        "_queryTicker": symbol,
+        "Exchange": "",
+        "sector": "",
+        "lastValue": None,
+        "marketCap": None,
+        "priceTargetLow": None,
+        "priceTargetMedian": None,
+        "priceTargetHigh": None,
+        "sparkline": [],
+        "sparklineLabel": [],
+        "sparklineColor": "blue",
+        "_loadError": None,
+    }
+
+
+def build_stock_portfolio_placeholder_records(tickers=None):
+    return [
+        build_stock_portfolio_placeholder_record(ticker_symbol, row_id)
+        for row_id, ticker_symbol in enumerate(
+            tickers or STOCK_PORTFOLIO_DEFAULT_TICKERS,
+            start=1,
+        )
+    ]
+
+
+def load_stock_portfolio_record(ticker_symbol, row_id):
+    placeholder = build_stock_portfolio_placeholder_record(ticker_symbol, row_id)
+    symbol = placeholder["_queryTicker"]
+
+    if not symbol:
+        placeholder["_loadError"] = "Missing ticker symbol."
+        return placeholder
+
+    if yf is None:
+        placeholder["_loadError"] = "Install yfinance to load live market data."
+        return placeholder
+
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info or {}
+        fast_info = dict(getattr(ticker, "fast_info", {}) or {})
+        analyst_targets = dict(getattr(ticker, "analyst_price_targets", {}) or {})
+        history = ticker.history(period=STOCK_PORTFOLIO_HISTORY_PERIOD)
+
+        close_values = []
+        if history is not None and not history.empty and "Close" in history:
+            close_values = [
+                round(float(value), 2)
+                for value in history["Close"].dropna().tolist()
+            ]
+
+        return {
+            "id": row_id,
+            "ticker": info.get("displayName") or info.get("shortName") or symbol,
+            "_queryTicker": symbol,
+            "Exchange": fast_info.get("exchange") or info.get("exchange") or "",
+            "sector": info.get("sector") or info.get("industry") or "",
+            "lastValue": coerce_numeric(analyst_targets.get("current")),
+            "marketCap": coerce_numeric(fast_info.get("marketCap")),
+            "priceTargetLow": coerce_numeric(analyst_targets.get("low")),
+            "priceTargetMedian": coerce_numeric(analyst_targets.get("median")),
+            "priceTargetHigh": coerce_numeric(analyst_targets.get("high")),
+            "sparkline": close_values,
+            "sparklineLabel": close_values,
+            "sparklineColor": "blue",
+            "_loadError": None,
+        }
+    except Exception as exc:  # pragma: no cover - network/runtime dependent
+        placeholder["_loadError"] = f"{type(exc).__name__}: {exc}"
+        return placeholder
+
+
+def load_stock_portfolio_records(tickers=None):
+    symbols = list(tickers or STOCK_PORTFOLIO_DEFAULT_TICKERS)
+    records = [
+        load_stock_portfolio_record(ticker_symbol, row_id)
+        for row_id, ticker_symbol in enumerate(symbols, start=1)
+    ]
+
+    failures = [
+        record["_queryTicker"]
+        for record in records
+        if record.get("_loadError")
+    ]
+    if yf is None:
+        status = "Install `yfinance` to enable the live stock portfolio demo."
+    elif failures:
+        status = (
+            "Live yfinance data loaded with gaps for: "
+            + ", ".join(failures)
+        )
+    else:
+        status = (
+            "Loaded live yfinance data for "
+            + ", ".join(record["_queryTicker"] for record in records)
+            + "."
+        )
+
+    return records, status
+
+
+STOCK_PORTFOLIO_RECORDS = build_stock_portfolio_placeholder_records()
+STOCK_PORTFOLIO_STATUS = "Loading live yfinance data..."
+STOCK_PORTFOLIO_COLUMNS = [
+    {"accessor": "ticker", "editable": True, "editor": dmc.TextInput(label="ticker")},
+    {"accessor": "Exchange"},
+    {"accessor": "sector"},
+    {"accessor": "lastValue"},
+    {"accessor": "marketCap"},
+    {"accessor": "priceTargetLow"},
+    {"accessor": "priceTargetMedian"},
+    {"accessor": "priceTargetHigh"},
+    {"accessor": "sparkline"},
+]
 
 
 def repeat_employees(cycles, *, include_batch_suffix=False):
@@ -953,6 +1097,7 @@ def iter_async_nested_rows(rows):
 
 
 SECTION_LINKS = [
+    ("section-api", "0. API reference"),
     ("section-basic", "1. Basic formatting"),
     ("section-selection", "2. Client-side selection"),
     ("section-expansion", "3. Row expansion and nesting"),
@@ -972,10 +1117,24 @@ SECTION_LINKS = [
     ("section-interactivity", "17. Interactivity"),
     ("section-rtl", "18. RTL support"),
     ("section-advanced-controls", "19. Advanced selection and pagination"),
-    ("section-custom-components", "20. Custom loaders and empty icons"),
+    ("section-stock-portfolio", "20. Stock portfolio"),
+    ("section-custom-components", "21. Custom loaders and empty icons"),
 ]
 
 CATEGORY_LINK_GROUPS = [
+    (
+        "API reference",
+        "Curated definitions, fluent methods, and commonly used keyword arguments for the public Python API.",
+        [
+            ("section-api", "0. API overview"),
+            ("api-datatable", "DataTable"),
+            ("api-column", "Column"),
+            ("api-column-group", "ColumnGroup"),
+            ("api-selection-config", "SelectionConfig"),
+            ("api-pagination-config", "PaginationConfig"),
+            ("api-row-expansion-config", "RowExpansionConfig"),
+        ],
+    ),
     (
         "Core workflows",
         "Start with the essential table patterns most Dash apps need first.",
@@ -1023,9 +1182,1522 @@ CATEGORY_LINK_GROUPS = [
         "Newer helper APIs and highly customized state presentation.",
         [
             ("section-advanced-controls", "19. Advanced selection and pagination"),
-            ("section-custom-components", "20. Custom loaders and empty icons"),
+            ("section-stock-portfolio", "20. Stock portfolio"),
+            ("section-custom-components", "21. Custom loaders and empty icons"),
         ],
     ),
+]
+
+API_REFERENCE_TABLE_COLUMNS = [
+    dmdt.Column(
+        "name",
+        title="Name",
+        width=320,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.85rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "description",
+        title="Description",
+        width=760,
+        cellsStyle={
+            "whiteSpace": "normal",
+            "lineHeight": 1.45,
+        },
+    ),
+    dmdt.Column(
+        "type",
+        title="Type",
+        width=260,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.85rem",
+            "whiteSpace": "normal",
+        },
+    ),
+]
+
+API_REFERENCE_SURFACE_COLUMNS = [
+    dmdt.Column(
+        "name",
+        title="Name",
+        width=240,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "kind",
+        title="Kind",
+        width=140,
+        cellsStyle={"whiteSpace": "normal"},
+    ),
+    dmdt.Column(
+        "type",
+        title="Type",
+        width=230,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "default",
+        title="Default",
+        width=160,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "description",
+        title="Description",
+        width=720,
+        cellsStyle={
+            "whiteSpace": "normal",
+            "lineHeight": 1.45,
+        },
+    ),
+]
+
+API_REFERENCE_PARAMETER_COLUMNS = [
+    dmdt.Column(
+        "name",
+        title="Name",
+        width=260,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "type",
+        title="Type",
+        width=180,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "default",
+        title="Default",
+        width=160,
+        cellsStyle={
+            "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "fontSize": "0.84rem",
+            "whiteSpace": "normal",
+        },
+    ),
+    dmdt.Column(
+        "description",
+        title="Description",
+        width=760,
+        cellsStyle={
+            "whiteSpace": "normal",
+            "lineHeight": 1.45,
+        },
+    ),
+]
+
+API_REFERENCE_ITEMS = [
+    {
+        "id": "api-datatable",
+        "name": "DataTable",
+        "kind": "component",
+        "signature": "dmdt.DataTable(*args, **kwargs)",
+        "description": (
+            "The main Dash component. Use it to render records, define columns, "
+            "control selection and pagination, and read callback payloads back "
+            "from the browser."
+        ),
+        "returns": "Returns a Dash component instance with chainable Python helpers.",
+        "methods": [
+            {
+                "name": "update_layout(**kwargs)",
+                "description": "Merge layout, sizing, direction, className, style, and other table-level presentation props.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_table_properties(**kwargs)",
+                "description": "Readable alias for `update_layout()` when you are tuning borders, spacing, striped rows, or other table props.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_columns(*columns, selector=None, overwrite=False, **kwargs)",
+                "description": "Add new columns or merge updates into existing columns by accessor.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "group_columns(*groups, selector=None, **kwargs)",
+                "description": "Create or update grouped headers, including nested group trees.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_rows(selector=None, **kwargs)",
+                "description": "Apply row-level colors, styles, class names, attributes, dragging, IDs, or expansion state.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "add_interactivity(...)",
+                "description": "Enable row or cell pointer-cursor affordances for click, double-click, or context-menu patterns.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_selection(**kwargs)",
+                "description": "Update controlled selection props and selection rule settings.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_pagination(**kwargs)",
+                "description": "Update page, page size, total records, and pagination appearance props.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_sorting(**kwargs)",
+                "description": "Update sort mode, sort status, or sort icon props.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "update_search(**kwargs)",
+                "description": "Update search mode, query text, and searchable accessor props.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "clear_selection()",
+                "description": "Reset `selectedRecordIds` and `selectedRecords` to empty lists.",
+                "type": "method -> DataTable",
+            },
+            {
+                "name": "clear_expansion()",
+                "description": "Reset `expandedRecordIds` to an empty list.",
+                "type": "method -> DataTable",
+            },
+        ],
+        "keyword_arguments": [
+            {
+                "name": "id",
+                "description": "Unique Dash callback identifier for the component.",
+                "type": "str | dict",
+            },
+            {
+                "name": "data",
+                "description": "Primary row data for the table. This is the preferred Dash-facing records prop.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "columns",
+                "description": "Column-definition dictionaries that control accessors, formatting, editing, filtering, and rendering.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "groups",
+                "description": "Grouped-header definitions for multi-column header layouts.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "groupBy",
+                "description": "Accessor or accessors used to build inline grouped parent rows.",
+                "type": "str | list[str]",
+            },
+            {
+                "name": "childRowsAccessor",
+                "description": "Accessor for already nested child-row arrays.",
+                "type": "str",
+            },
+            {
+                "name": "idAccessor",
+                "description": "Record identifier accessor used by selection, expansion, and row updates.",
+                "type": "str | dict | list[str]",
+            },
+            {
+                "name": "selectionTrigger",
+                "description": "Turns selection on and chooses whether rows are selected by a cell click or checkbox click.",
+                "type": "'cell' | 'checkbox'",
+            },
+            {
+                "name": "selectedRecordIds",
+                "description": "Controlled selection state. Useful when the rest of the app owns selected rows.",
+                "type": "list",
+            },
+            {
+                "name": "rowExpansion",
+                "description": "Expansion configuration, usually built with `RowExpansionConfig()`.",
+                "type": "dict",
+            },
+            {
+                "name": "rowDragging",
+                "description": "Enables drag-and-drop row reordering and emits `lastRowDragChange` payloads.",
+                "type": "bool | dict",
+            },
+            {
+                "name": "sortStatus",
+                "description": "Controlled sorting descriptor containing the active accessor and direction.",
+                "type": "dict",
+            },
+            {
+                "name": "searchQuery",
+                "description": "Controlled search text for client or server search flows.",
+                "type": "str",
+            },
+            {
+                "name": "page / pageSize / recordsPerPage / totalRecords",
+                "description": "Core controlled pagination props for server-backed tables and explicit pagination UIs.",
+                "type": "number",
+            },
+            {
+                "name": "paginationMode / sortMode / searchMode",
+                "description": "Switch each behavior between client and server control, or disable pagination entirely.",
+                "type": "enum",
+            },
+            {
+                "name": "striped / withTableBorder / withColumnBorders / stickyHeader",
+                "description": "High-value presentation props that make a first table look polished quickly.",
+                "type": "bool",
+            },
+            {
+                "name": "height / minHeight / maxHeight",
+                "description": "Sizing props commonly used for fixed-height scrolling layouts.",
+                "type": "str | number",
+            },
+            {
+                "name": "emptyState / customLoader / noRecordsIcon",
+                "description": "Built-in empty and loading customization points for more branded table states.",
+                "type": "component | str",
+            },
+            {
+                "name": "storeColumnsKey",
+                "description": "Persists draggable, toggleable, and resizable column state in local storage.",
+                "type": "str",
+            },
+        ],
+        "attributes": [
+            {
+                "name": "data",
+                "description": "The current records attached to the table component.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "columns",
+                "description": "The active column configuration after any fluent updates.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "groups",
+                "description": "Current grouped-header definitions.",
+                "type": "list[dict] | None",
+            },
+            {
+                "name": "selectedRecordIds",
+                "description": "Currently selected record identifiers.",
+                "type": "list",
+            },
+            {
+                "name": "selectedRecords",
+                "description": "Selected record payloads mirrored from the front end.",
+                "type": "list",
+            },
+            {
+                "name": "expandedRecordIds",
+                "description": "Identifiers for rows that are currently expanded.",
+                "type": "list",
+            },
+            {
+                "name": "sortStatus",
+                "description": "Current sort descriptor used for client or server sorting.",
+                "type": "dict | None",
+            },
+            {
+                "name": "searchQuery",
+                "description": "Current search text.",
+                "type": "str | None",
+            },
+            {
+                "name": "lastSelectionChange",
+                "description": "Latest selection callback payload emitted by the component.",
+                "type": "dict | None",
+            },
+            {
+                "name": "lastSortChange",
+                "description": "Latest sort callback payload emitted by the component.",
+                "type": "dict | None",
+            },
+            {
+                "name": "lastExpansionChange",
+                "description": "Latest row-expansion callback payload emitted by the component.",
+                "type": "dict | None",
+            },
+            {
+                "name": "lastRowDragChange",
+                "description": "Latest row-drag callback payload emitted by the component.",
+                "type": "dict | None",
+            },
+        ],
+    },
+    {
+        "id": "api-column",
+        "name": "Column",
+        "kind": "helper",
+        "signature": "dmdt.Column(accessor=None, /, **kwargs)",
+        "description": (
+            "Convenience builder for a column-definition dictionary. It keeps "
+            "demo code compact and makes default-column props easier to read."
+        ),
+        "returns": "Returns a plain `dict` that can be used in `columns` or `defaultColumnProps`.",
+        "keyword_arguments": [
+            {
+                "name": "accessor",
+                "description": "Record key rendered by the column.",
+                "type": "str",
+            },
+            {
+                "name": "title",
+                "description": "Human-friendly header label. Defaults to a title-cased accessor when omitted by the front end.",
+                "type": "str",
+            },
+            {
+                "name": "presentation",
+                "description": "Built-in display mode such as `text`, `number`, `currency`, `date`, `datetime`, `badge`, `link`, `code`, `json`, or `progress`.",
+                "type": "str",
+            },
+            {
+                "name": "sortable",
+                "description": "Marks the column as sortable.",
+                "type": "bool",
+            },
+            {
+                "name": "textAlign",
+                "description": "Horizontal alignment for header and cell content.",
+                "type": "'left' | 'center' | 'right'",
+            },
+            {
+                "name": "width",
+                "description": "Preferred column width, especially useful with dragging or resizing enabled.",
+                "type": "number",
+            },
+            {
+                "name": "render",
+                "description": "Custom cell renderer template or component.",
+                "type": "component | any",
+            },
+            {
+                "name": "editable / editor",
+                "description": "Enable inline editing and optionally provide a custom Dash input component.",
+                "type": "bool / component",
+            },
+            {
+                "name": "filter",
+                "description": "Dash component rendered inside the column filter popover.",
+                "type": "component",
+            },
+            {
+                "name": "cellsStyle / titleStyle",
+                "description": "Inline style mappings for body cells and header cells.",
+                "type": "dict",
+            },
+            {
+                "name": "draggable / toggleable / resizable",
+                "description": "Enable column dragging, visibility toggling, or resizing for the column.",
+                "type": "bool",
+            },
+            {
+                "name": "defaultToggle",
+                "description": "Initial toggle state for optional columns when column toggling is enabled.",
+                "type": "bool",
+            },
+        ],
+    },
+    {
+        "id": "api-column-group",
+        "name": "ColumnGroup",
+        "kind": "helper",
+        "signature": "dmdt.ColumnGroup(group_id=None, /, *, columns=None, groups=None, **kwargs)",
+        "description": (
+            "Builder for grouped-header dictionaries. Use it for shared "
+            "header labels and nested header trees."
+        ),
+        "returns": "Returns a plain `dict` for use in `groups` or `group_columns()`.",
+        "keyword_arguments": [
+            {
+                "name": "group_id",
+                "description": "Stable identifier used when updating existing groups with `group_columns(selector=...)`.",
+                "type": "str",
+            },
+            {
+                "name": "title",
+                "description": "Visible group label shown above the grouped columns.",
+                "type": "str",
+            },
+            {
+                "name": "columns",
+                "description": "Column accessors or column dictionaries included in the group.",
+                "type": "list[str | dict]",
+            },
+            {
+                "name": "groups",
+                "description": "Nested child groups for multi-row header structures.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "style",
+                "description": "Inline styles applied to the grouped-header cell.",
+                "type": "dict",
+            },
+        ],
+    },
+    {
+        "id": "api-selection-config",
+        "name": "SelectionConfig",
+        "kind": "helper",
+        "signature": "dmdt.SelectionConfig(**kwargs)",
+        "description": (
+            "Compact builder for selection-related props. It removes `None` "
+            "values so larger table declarations stay readable."
+        ),
+        "returns": "Returns a plain `dict` with `None` values removed.",
+        "keyword_arguments": [
+            {
+                "name": "selectionTrigger",
+                "description": "Turns selection on and chooses cell-based or checkbox-based selection.",
+                "type": "'cell' | 'checkbox'",
+            },
+            {
+                "name": "selectedRecordIds",
+                "description": "Controlled selection IDs.",
+                "type": "list",
+            },
+            {
+                "name": "selectedRecords",
+                "description": "Controlled selection payloads.",
+                "type": "list[dict]",
+            },
+            {
+                "name": "selectableRowRules",
+                "description": "Rule objects that determine which rows are selectable.",
+                "type": "bool | dict | list",
+            },
+            {
+                "name": "disabledSelectionRowRules",
+                "description": "Rules that explicitly disable selection for matching rows.",
+                "type": "bool | dict | list",
+            },
+            {
+                "name": "selectionCheckboxRules",
+                "description": "Rules that customize checkbox appearance or behavior per row.",
+                "type": "dict | list",
+            },
+            {
+                "name": "selectionCheckboxProps / allRecordsSelectionCheckboxProps",
+                "description": "Props forwarded to row checkboxes or the header checkbox.",
+                "type": "dict",
+            },
+            {
+                "name": "selectionColumnClassName / selectionColumnStyle",
+                "description": "Styling hooks for the selection column.",
+                "type": "str / dict",
+            },
+        ],
+    },
+    {
+        "id": "api-pagination-config",
+        "name": "PaginationConfig",
+        "kind": "helper",
+        "signature": "dmdt.PaginationConfig(**kwargs)",
+        "description": (
+            "Compact builder for pagination-related props. It is especially "
+            "useful when a table has several pagination styling and state props."
+        ),
+        "returns": "Returns a plain `dict` with `None` values removed.",
+        "keyword_arguments": [
+            {
+                "name": "page",
+                "description": "Current page number.",
+                "type": "number",
+            },
+            {
+                "name": "pageSize / recordsPerPage",
+                "description": "Current page size. Both names appear in the API, so demos often set both for clarity.",
+                "type": "number",
+            },
+            {
+                "name": "totalRecords",
+                "description": "Total row count used for server pagination.",
+                "type": "number",
+            },
+            {
+                "name": "recordsPerPageOptions / pageSizeOptions",
+                "description": "Available page-size choices shown in the pagination UI.",
+                "type": "list[number]",
+            },
+            {
+                "name": "recordsPerPageLabel",
+                "description": "Label shown next to the page-size selector.",
+                "type": "str",
+            },
+            {
+                "name": "paginationSize",
+                "description": "Mantine size token for the pagination controls.",
+                "type": "str | number",
+            },
+            {
+                "name": "paginationActiveTextColor / paginationActiveBackgroundColor",
+                "description": "Overrides the active page colors so the paginator can match the rest of the app.",
+                "type": "str | dict",
+            },
+            {
+                "name": "paginationWithEdges / paginationWithControls",
+                "description": "Toggle first/last buttons and previous/next controls.",
+                "type": "bool",
+            },
+        ],
+    },
+    {
+        "id": "api-row-expansion-config",
+        "name": "RowExpansionConfig",
+        "kind": "helper",
+        "signature": "dmdt.RowExpansionConfig(content=None, /, **kwargs)",
+        "description": (
+            "Builder for row-expansion dictionaries. Use it when expanded rows "
+            "should render detail content, nested tables, or callback-driven child views."
+        ),
+        "returns": "Returns a plain `dict` with `None` values removed.",
+        "keyword_arguments": [
+            {
+                "name": "content",
+                "description": "Expansion content rendered when a row opens.",
+                "type": "component | any",
+            },
+            {
+                "name": "allowMultiple",
+                "description": "Allows more than one row to remain expanded at the same time.",
+                "type": "bool",
+            },
+            {
+                "name": "trigger",
+                "description": "Controls how expansion is triggered, such as click-driven row expansion.",
+                "type": "str",
+            },
+        ],
+    },
+]
+
+DATA_TABLE_METADATA_PATH = Path(dmdt.__file__).with_name("metadata.json")
+DATA_TABLE_PY_PATH = Path(dmdt.__file__).with_name("DataTable.py")
+DATA_TABLE_METADATA = json.loads(DATA_TABLE_METADATA_PATH.read_text(encoding="utf-8"))[
+    "src/lib/components/DataTable.react.js"
+]["props"]
+
+DATA_TABLE_PROP_DESCRIPTION_OVERRIDES = {
+    "paginationMode": "Controls whether pagination is handled on the client, delegated to the server, or disabled entirely.",
+    "sortMode": "Controls whether sorting is handled on the client or delegated to the server.",
+    "searchMode": "Controls whether search filtering is handled on the client or delegated to the server.",
+    "searchQuery": "Controlled search query used for client-side filtering or server-side search callbacks.",
+    "searchableAccessors": "Limits client-side search to the listed column accessors.",
+    "page": "Controlled current page number.",
+    "recordsPerPage": "Controlled rows-per-page value used by the pagination UI.",
+    "pageSize": "Controlled page size used by the component's page calculations.",
+    "totalRecords": "Total available record count, typically required for server pagination.",
+    "sortStatus": "Controlled sorting descriptor containing the active accessor and sort direction.",
+    "selectedRecordIds": "Controlled list of selected record identifiers.",
+    "selectedRecords": "Selected record payloads mirrored from the current front-end state.",
+    "expandedRecordIds": "Controlled list of expanded row identifiers.",
+    "selectionTrigger": "Enables row selection and chooses whether it is triggered by cell clicks or checkboxes.",
+    "selectionColumnClassName": "Custom class name applied to the selection column.",
+    "selectionColumnStyle": "Inline style mapping applied to the selection column.",
+    "selectionCheckboxProps": "Props forwarded to each row selection checkbox.",
+    "allRecordsSelectionCheckboxProps": "Props forwarded to the header checkbox that selects all rows.",
+    "selectableRowRules": "Dash-safe rule objects that determine which rows can be selected.",
+    "disabledSelectionRowRules": "Dash-safe rule objects that explicitly disable selection for matching rows.",
+    "selectionCheckboxRules": "Dash-safe rule objects that customize checkbox appearance or behavior per row.",
+    "rowAttributes": "Static attributes or selector-based rule objects applied to rendered row elements.",
+    "rowExpansion": "Configuration for expanded row content, trigger behavior, and multi-row expansion.",
+    "rowClick": "Callback payload emitted when a row click occurs.",
+    "rowDoubleClick": "Callback payload emitted when a row double-click occurs.",
+    "rowContextMenu": "Callback payload emitted when a row context-menu interaction occurs.",
+    "cellClick": "Callback payload emitted when a cell click occurs.",
+    "cellDoubleClick": "Callback payload emitted when a cell double-click occurs.",
+    "cellContextMenu": "Callback payload emitted when a cell context-menu interaction occurs.",
+    "pagination": "Callback payload describing the current pagination interaction.",
+    "scrollPosition": "Callback payload containing the current scroll offsets.",
+    "scrollEdge": "Callback payload emitted when the table reaches a scroll edge.",
+    "lastRowDragChange": "Latest row-drag payload, including moved IDs and reordered records.",
+    "lastSortChange": "Latest sorting payload emitted by the component.",
+    "lastSelectionChange": "Latest selection payload emitted by the component.",
+    "lastExpansionChange": "Latest expansion payload emitted by the component.",
+    "emptyState": "Custom component or string rendered when the table has no records.",
+    "noRecordsIcon": "Custom icon or component shown above the no-records text.",
+    "noRecordsText": "Text shown when the table has no records to display.",
+    "recordsPerPageOptions": "List of rows-per-page options shown by the pagination control.",
+    "pageSizeOptions": "Alternate page-size option list accepted by the component.",
+    "recordsPerPageLabel": "Label displayed next to the rows-per-page selector.",
+    "paginationSize": "Mantine size token used for the pagination controls.",
+    "paginationActiveTextColor": "Active page text color override for the pagination controls.",
+    "paginationActiveBackgroundColor": "Active page background color override for the pagination controls.",
+    "loadingText": "Text shown inside the built-in loading overlay.",
+    "tableProps": "Additional props forwarded to the underlying Mantine table element.",
+    "scrollAreaProps": "Additional props forwarded to the Mantine scroll area wrapper.",
+    "className": "Custom class name applied to the root table wrapper.",
+    "tableClassName": "Custom class name applied to the inner table element.",
+    "classNames": "Mantine classNames mapping for internal table parts.",
+    "style": "Inline styles applied to the root table wrapper.",
+    "styles": "Mantine styles mapping for internal table parts.",
+    "radius": "Mantine radius token or explicit value used by the outer table container.",
+    "height": "Explicit table height, commonly used to enable internal scrolling.",
+    "minHeight": "Minimum table height.",
+    "maxHeight": "Maximum table height.",
+    "shadow": "Mantine shadow token applied to the outer table container.",
+    "bg": "Mantine background style prop applied to the root container.",
+    "c": "Mantine text-color style prop applied to the root container.",
+    "rowBorderColor": "Border color used between body rows.",
+    "stripedColor": "Background color used for striped rows.",
+    "highlightOnHoverColor": "Background color used when rows are hovered.",
+    "withRowBorders": "Controls whether horizontal borders are shown between rows.",
+    "withTableBorder": "Controls whether the table wrapper shows an outer border.",
+    "withColumnBorders": "Controls whether vertical borders are shown between columns.",
+    "horizontalSpacing": "Horizontal cell padding.",
+    "verticalSpacing": "Vertical cell padding.",
+    "borderRadius": "Alias-style table border radius setting used by the underlying Mantine table.",
+    "striped": "Turns zebra-striping on or off.",
+    "highlightOnHover": "Highlights rows on hover.",
+    "textSelectionDisabled": "Disables text selection inside the table, useful for interactive rows and cells.",
+    "fetching": "Shows the loading overlay while data is being fetched or hydrated.",
+    "loaderBackgroundBlur": "Backdrop blur strength used by the built-in loading overlay.",
+    "loaderSize": "Size of the built-in loader.",
+    "loaderType": "Visual variant of the built-in loader.",
+    "loaderColor": "Color used by the built-in loader.",
+    "customLoader": "Custom component rendered instead of the built-in loading indicator.",
+    "noHeader": "Hides the table header row.",
+    "pinFirstColumn": "Pins the first visible data column to the left edge while horizontally scrolling.",
+    "pinLastColumn": "Pins the last visible data column to the right edge while horizontally scrolling.",
+    "stickyHeader": "Makes the header sticky while the body scrolls vertically.",
+    "stickyHeaderOffset": "Offset applied to the sticky header position.",
+    "verticalAlign": "Vertical alignment for body cells.",
+    "paginationWithEdges": "Shows first-page and last-page controls in the paginator.",
+    "paginationWithControls": "Shows previous and next controls in the paginator.",
+    "defaultColumnProps": "Default column props merged into every column definition.",
+    "defaultColumnRender": "Default Dash render template used when a column does not provide its own renderer.",
+    "sortIcons": "Custom sorted and unsorted icons used by sortable columns.",
+    "bodyRef": "Ref-like prop exposed for the table body container.",
+    "tableRef": "Ref-like prop exposed for the root table container.",
+    "setProps": "Dash-managed internal callback used to push property updates back to Python.",
+}
+
+DATA_TABLE_METHOD_DETAILS = [
+    {
+        "name": "update_layout",
+        "signature": "update_layout(**kwargs)",
+        "description": "Merge layout, sizing, direction, style, and other table-level presentation props into the current table instance.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "radius",
+                "description": "Rounded-corner setting for the outer table container.",
+                "type": "str | number",
+                "default": "",
+            },
+            {
+                "name": "withTableBorder",
+                "description": "Shows an outer border around the table wrapper.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "withColumnBorders",
+                "description": "Shows vertical borders between columns.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "striped",
+                "description": "Turns zebra striping on for alternating rows.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "direction",
+                "description": "Switches the table into left-to-right or right-to-left layout mode.",
+                "type": "'ltr' | 'rtl'",
+                "default": "",
+            },
+            {
+                "name": "height / minHeight / maxHeight",
+                "description": "Common sizing props used for fixed-height scrolling and constrained layouts.",
+                "type": "str | number",
+                "default": "",
+            },
+            {
+                "name": "bg",
+                "description": "Mantine background style prop applied to the root container.",
+                "type": "str | dict",
+                "default": "",
+            },
+            {
+                "name": "textSelectionDisabled",
+                "description": "Disables text selection, useful for interactive rows and cells.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "pinFirstColumn / pinLastColumn",
+                "description": "Pins the first or last visible column while horizontally scrolling.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "loadingText / loaderType / loaderColor",
+                "description": "Common loading-overlay customization props used by the examples.",
+                "type": "str",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other layout-oriented props such as `style`, `className`, `tableProps`, `scrollAreaProps`, or Mantine style props.",
+                "type": "component props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "Mapping props such as `style`, `styles`, `classNames`, `tableProps`, and `scrollAreaProps` are merged recursively.",
+            "Python aliases such as `dir` and `group_by` are normalized before the update is applied.",
+        ],
+    },
+    {
+        "name": "update_table_properties",
+        "signature": "update_table_properties(**kwargs)",
+        "description": "Readable alias for `update_layout()` when you are adjusting table behavior, borders, spacing, striped rows, or default-column settings.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "withRowBorders / withTableBorder / withColumnBorders",
+                "description": "Controls the row, outer, and vertical border treatment.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "horizontalSpacing / verticalSpacing",
+                "description": "Cell padding controls used heavily in the table-properties demo.",
+                "type": "str | number",
+                "default": "",
+            },
+            {
+                "name": "verticalAlign",
+                "description": "Vertical alignment for body cells.",
+                "type": "'top' | 'center' | 'bottom'",
+                "default": "",
+            },
+            {
+                "name": "striped / highlightOnHover / stickyHeader",
+                "description": "High-value behavior and presentation toggles for body rendering and header behavior.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "defaultColumnProps",
+                "description": "Default props merged into every column definition.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other table-level props that read more clearly when grouped under a table-properties call.",
+                "type": "component props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "This method exists for readability in fluent chains; behavior matches `update_layout()`.",
+        ],
+    },
+    {
+        "name": "update_columns",
+        "signature": "update_columns(*columns, selector=None, overwrite=False, **kwargs)",
+        "description": "Add new columns or merge updates into existing columns by accessor.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "*columns",
+                "description": "Accessor strings or column dictionaries to add or update.",
+                "type": "str | dict",
+                "default": "",
+            },
+            {
+                "name": "selector",
+                "description": "Accessor or collection of accessors identifying the columns to update. When omitted, incoming columns target their own accessor values.",
+                "type": "Any",
+                "default": "None",
+            },
+            {
+                "name": "overwrite",
+                "description": "Replace matching column definitions instead of merging into them.",
+                "type": "bool",
+                "default": "False",
+            },
+            {
+                "name": "title / width / presentation / textAlign",
+                "description": "Most common display and formatting props used to shape a column quickly.",
+                "type": "column props",
+                "default": "",
+            },
+            {
+                "name": "sortable / ellipsis",
+                "description": "Frequently used boolean props for sorting and truncation behavior.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "cellsStyle / titleStyle",
+                "description": "Inline style mappings for body cells and header cells.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "render",
+                "description": "Custom render template or Dash component for cell content.",
+                "type": "component | any",
+                "default": "",
+            },
+            {
+                "name": "editable / editor",
+                "description": "Turns on inline editing and optionally supplies a custom editor component.",
+                "type": "bool / component",
+                "default": "",
+            },
+            {
+                "name": "filter / filtering / filterPopoverProps",
+                "description": "Column filter UI and related behavior.",
+                "type": "component / bool / dict",
+                "default": "",
+            },
+            {
+                "name": "draggable / toggleable / resizable / defaultToggle",
+                "description": "Column persistence and layout controls used in the dragging, toggling, and resizing demos.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other column props accepted by the component.",
+                "type": "column props",
+                "default": "",
+            },
+        ],
+        "notes": [
+            "Nested mapping props like `style`, `cellsStyle`, `titleStyle`, `headerStyle`, and `filterPopoverProps` are merged recursively.",
+            "If no matching column exists and the update includes an accessor, the column is appended.",
+        ],
+    },
+    {
+        "name": "group_columns",
+        "signature": "group_columns(*groups, selector=None, **kwargs)",
+        "description": "Create or update grouped headers, including nested group trees.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "*groups",
+                "description": "Group dictionaries to append or apply.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "selector",
+                "description": "Group ID or collection of IDs used to target existing groups.",
+                "type": "Any",
+                "default": "None",
+            },
+            {
+                "name": "title",
+                "description": "Visible grouped-header label.",
+                "type": "str",
+                "default": "",
+            },
+            {
+                "name": "columns / groups",
+                "description": "Direct child columns or nested child groups.",
+                "type": "list",
+                "default": "",
+            },
+            {
+                "name": "style / textAlign",
+                "description": "Common presentation props for grouped-header cells.",
+                "type": "dict / str",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other grouped-header props accepted by the component.",
+                "type": "group props",
+                "default": "",
+            },
+        ],
+        "notes": [
+            "Column accessors inside `columns` are resolved against the current column definitions.",
+            "Nested `groups` trees are normalized before being stored on the component.",
+        ],
+    },
+    {
+        "name": "update_rows",
+        "signature": "update_rows(selector=None, **kwargs)",
+        "description": "Apply row-level colors, styles, class names, attributes, dragging, IDs, or expansion state.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "selector",
+                "description": "Dash-safe row selector, commonly a mapping of field names to expected values.",
+                "type": "Any",
+                "default": "None",
+            },
+            {
+                "name": "rowColor / color",
+                "description": "Static or selector-based row text color.",
+                "type": "str | dict | list",
+                "default": "",
+            },
+            {
+                "name": "rowBackgroundColor / backgroundColor",
+                "description": "Static or selector-based row background color.",
+                "type": "str | dict | list",
+                "default": "",
+            },
+            {
+                "name": "rowClassName / className",
+                "description": "Static or selector-based row class names.",
+                "type": "str | dict | list",
+                "default": "",
+            },
+            {
+                "name": "rowStyle / style",
+                "description": "Static or selector-based row inline styles.",
+                "type": "dict | list",
+                "default": "",
+            },
+            {
+                "name": "rowAttributes / attributes",
+                "description": "Static or selector-based DOM attributes for rows.",
+                "type": "dict | list",
+                "default": "",
+            },
+            {
+                "name": "rowDragging / draggable",
+                "description": "Turns on row dragging. This is table-level and cannot be combined with a selector.",
+                "type": "bool | dict",
+                "default": "",
+            },
+            {
+                "name": "idAccessor",
+                "description": "Record ID accessor, including tuple/list shorthand for composite IDs.",
+                "type": "str | list[str]",
+                "default": "",
+            },
+            {
+                "name": "expandedRecordIds / rowExpansion",
+                "description": "Controlled expansion state and expansion configuration.",
+                "type": "list / dict",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other row props accepted by the component.",
+                "type": "row props",
+                "default": "",
+            },
+        ],
+        "notes": [
+            "Supported aliases are `color`, `backgroundColor`, `className`, `style`, `attributes`, and `draggable`.",
+            "Selector-based row styling is stored as Dash-safe rule objects of the form `{'selector': ..., 'value': ...}`.",
+            "Table-level props such as `rowDragging` and `rowExpansion` cannot be combined with a selector.",
+        ],
+    },
+    {
+        "name": "add_interactivity",
+        "signature": "add_interactivity(*, rowClick=False, rowDoubleClick=False, rowContextMenu=False, cellClick=False, cellDoubleClick=False, cellContextMenu=False, cellSelector=None)",
+        "description": "Enable row or cell pointer-cursor affordances for click, double-click, or context-menu patterns.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "rowClick / rowDoubleClick / rowContextMenu",
+                "description": "Turn on interactive row styling for the selected row interaction types.",
+                "type": "bool",
+                "default": "False",
+            },
+            {
+                "name": "cellClick / cellDoubleClick / cellContextMenu",
+                "description": "Turn on interactive cell styling for the selected cell interaction types.",
+                "type": "bool",
+                "default": "False",
+            },
+            {
+                "name": "cellSelector",
+                "description": "Optional accessor or accessor list limiting which columns receive interactive cell styling.",
+                "type": "Any",
+                "default": "None",
+            },
+        ],
+        "notes": [
+            "This helper adjusts presentation only. It does not register Dash callbacks by itself.",
+            "When row interactivity is enabled, the helper turns on pointer cursors and disables text selection.",
+        ],
+    },
+    {
+        "name": "update_selection",
+        "signature": "update_selection(**kwargs)",
+        "description": "Update controlled selection props and selection rule settings.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "selectionTrigger",
+                "description": "Turns selection on and chooses between cell-based and checkbox-based selection.",
+                "type": "'cell' | 'checkbox'",
+                "default": "",
+            },
+            {
+                "name": "selectedRecordIds / selectedRecords",
+                "description": "Controlled selection state written into the component.",
+                "type": "list",
+                "default": "",
+            },
+            {
+                "name": "selectableRowRules / disabledSelectionRowRules",
+                "description": "Rule objects that allow or block selection for matching rows.",
+                "type": "bool | dict | list",
+                "default": "",
+            },
+            {
+                "name": "selectionCheckboxRules",
+                "description": "Per-row checkbox customization rules.",
+                "type": "dict | list",
+                "default": "",
+            },
+            {
+                "name": "selectionCheckboxProps / allRecordsSelectionCheckboxProps",
+                "description": "Props forwarded to row checkboxes and the header checkbox.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "selectionColumnClassName / selectionColumnStyle",
+                "description": "Styling hooks for the selection column.",
+                "type": "str / dict",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other selection-related props accepted by the component.",
+                "type": "selection props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "Useful when selection-related props are easier to keep grouped in a fluent chain.",
+        ],
+    },
+    {
+        "name": "update_pagination",
+        "signature": "update_pagination(**kwargs)",
+        "description": "Update page, page size, total records, and pagination appearance props.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "page",
+                "description": "Current page number.",
+                "type": "number",
+                "default": "",
+            },
+            {
+                "name": "pageSize / recordsPerPage",
+                "description": "Current page-size values used by the component and UI.",
+                "type": "number",
+                "default": "",
+            },
+            {
+                "name": "totalRecords",
+                "description": "Total result size for server-driven pagination.",
+                "type": "number",
+                "default": "",
+            },
+            {
+                "name": "recordsPerPageOptions / pageSizeOptions",
+                "description": "Available page-size choices shown in the pagination controls.",
+                "type": "list[number]",
+                "default": "",
+            },
+            {
+                "name": "recordsPerPageLabel / paginationSize",
+                "description": "Common paginator labeling and sizing props.",
+                "type": "str | number",
+                "default": "",
+            },
+            {
+                "name": "paginationActiveTextColor / paginationActiveBackgroundColor",
+                "description": "Active-page color overrides.",
+                "type": "str | dict",
+                "default": "",
+            },
+            {
+                "name": "paginationWithEdges / paginationWithControls",
+                "description": "Toggles first/last and previous/next pagination controls.",
+                "type": "bool",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other pagination-related props accepted by the component.",
+                "type": "pagination props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "Especially useful in server-driven tables where pagination props are updated together.",
+        ],
+    },
+    {
+        "name": "update_sorting",
+        "signature": "update_sorting(**kwargs)",
+        "description": "Update sort mode, sort status, or sort icon props.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "sortStatus",
+                "description": "Controlled sort descriptor containing the active accessor and direction.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "sortMode",
+                "description": "Chooses client-side or server-side sorting.",
+                "type": "'client' | 'server'",
+                "default": "",
+            },
+            {
+                "name": "sortIcons",
+                "description": "Custom sorted and unsorted icons for sortable headers.",
+                "type": "dict",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other sorting-related props accepted by the component.",
+                "type": "sorting props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "Useful when sort state is controlled by the rest of the Dash app.",
+        ],
+    },
+    {
+        "name": "update_search",
+        "signature": "update_search(**kwargs)",
+        "description": "Update search mode, query text, and searchable accessor props.",
+        "returns": "DataTable",
+        "parameters": [
+            {
+                "name": "searchQuery",
+                "description": "Controlled search query text.",
+                "type": "str",
+                "default": "",
+            },
+            {
+                "name": "searchMode",
+                "description": "Chooses client-side or server-side search behavior.",
+                "type": "'client' | 'server'",
+                "default": "",
+            },
+            {
+                "name": "searchableAccessors",
+                "description": "Limits client-side search to the listed columns.",
+                "type": "list[str]",
+                "default": "",
+            },
+            {
+                "name": "**kwargs",
+                "description": "Any other search-related props accepted by the component.",
+                "type": "search props",
+                "default": "",
+            }
+        ],
+        "notes": [
+            "Useful when search state is controlled outside the table or synchronized with external inputs.",
+        ],
+    },
+    {
+        "name": "clear_selection",
+        "signature": "clear_selection()",
+        "description": "Reset `selectedRecordIds` and `selectedRecords` to empty lists.",
+        "returns": "DataTable",
+        "parameters": [],
+        "notes": [
+            "A small convenience helper for reset flows and example callbacks.",
+        ],
+    },
+    {
+        "name": "clear_expansion",
+        "signature": "clear_expansion()",
+        "description": "Reset `expandedRecordIds` to an empty list.",
+        "returns": "DataTable",
+        "parameters": [],
+        "notes": [
+            "Useful when expansion state should be cleared after a filter, refresh, or navigation event.",
+        ],
+    },
+]
+
+DATA_TABLE_STYLE_PROP_NAMES = {
+    "m", "mx", "my", "mt", "mb", "ms", "me", "ml", "mr",
+    "p", "px", "py", "pt", "pb", "ps", "pe", "pl", "pr",
+    "w", "miw", "maw", "h", "mih", "mah", "opacity", "ff",
+    "fz", "fw", "lts", "ta", "lh", "fs", "tt", "display",
+    "flex", "bd", "bdrs", "td", "bgsz", "bgp", "bgr", "bga",
+    "pos", "top", "left", "bottom", "right", "inset", "hiddenFrom", "visibleFrom",
+}
+
+DATA_TABLE_STYLE_DRIVEN_NAMES = DATA_TABLE_STYLE_PROP_NAMES | {
+    "backgroundColor",
+    "borderColor",
+    "borderRadius",
+    "c",
+    "className",
+    "classNames",
+    "fz",
+    "height",
+    "highlightOnHover",
+    "highlightOnHoverColor",
+    "horizontalSpacing",
+    "maxHeight",
+    "minHeight",
+    "noHeader",
+    "paginationActiveBackgroundColor",
+    "paginationActiveTextColor",
+    "paginationSize",
+    "radius",
+    "rowBorderColor",
+    "shadow",
+    "stickyHeader",
+    "stickyHeaderOffset",
+    "striped",
+    "stripedColor",
+    "style",
+    "styles",
+    "tableClassName",
+    "textSelectionDisabled",
+    "verticalAlign",
+    "verticalSpacing",
+    "withColumnBorders",
+    "withRowBorders",
+    "withTableBorder",
+}
+
+
+def read_generated_datatable_parameter_names():
+    """Read the canonical generated parameter names from `DataTable.py`."""
+
+    source = DATA_TABLE_PY_PATH.read_text(encoding="utf-8")
+    match = re.search(r"self\.available_properties = (\[[^\]]*\])", source, re.DOTALL)
+    if not match:
+        raise ValueError("Could not locate available_properties in generated DataTable.py")
+    return ast.literal_eval(match.group(1))
+
+
+def format_metadata_type(type_def):
+    """Convert react-docgen type metadata into a readable string."""
+
+    if not isinstance(type_def, dict):
+        return str(type_def or "")
+
+    type_name = type_def.get("name")
+    if type_name == "union":
+        return " | ".join(format_metadata_type(value) for value in type_def.get("value", []))
+    if type_name == "arrayOf":
+        return f"list[{format_metadata_type(type_def.get('value'))}]"
+    if type_name == "enum":
+        values = []
+        for value in type_def.get("value", []):
+            rendered = value.get("value", "")
+            if rendered.startswith("'") and rendered.endswith("'"):
+                rendered = rendered[1:-1]
+            values.append(rendered)
+        return " | ".join(values)
+    return {
+        "string": "str",
+        "number": "number",
+        "bool": "bool",
+        "object": "dict",
+        "array": "list",
+        "func": "callable",
+        "any": "any",
+    }.get(type_name, type_name or "")
+
+
+def format_metadata_default(prop_meta):
+    """Render a human-readable default value from react-docgen metadata."""
+
+    default = prop_meta.get("defaultValue")
+    if not default:
+        return ""
+
+    value = str(default.get("value", "")).strip()
+    if value in {"undefined", "None", ""}:
+        return ""
+    if value.startswith("'") and value.endswith("'"):
+        return value[1:-1]
+    return value
+
+
+def normalize_doc_text(text):
+    """Collapse doc text so it fits better inside a table cell."""
+
+    return " ".join(str(text or "").split())
+
+
+def describe_datatable_prop(name, prop_meta):
+    """Return a useful description for a DataTable property."""
+
+    description = normalize_doc_text(prop_meta.get("description"))
+    if description:
+        return description
+
+    if name in DATA_TABLE_PROP_DESCRIPTION_OVERRIDES:
+        return DATA_TABLE_PROP_DESCRIPTION_OVERRIDES[name]
+
+    if name.startswith("last") and name.endswith("Change"):
+        label = name[4:-6]
+        return f"Latest {label[:1].lower() + label[1:]} payload emitted by the component."
+
+    if name in {"rowClick", "rowDoubleClick", "rowContextMenu", "cellClick", "cellDoubleClick", "cellContextMenu"}:
+        return f"Callback payload emitted when `{name}` fires."
+
+    if name in DATA_TABLE_STYLE_PROP_NAMES:
+        return "Mantine style prop forwarded to the root table container."
+
+    if name in {"backgroundColor", "borderColor"}:
+        return "Color override applied to the table container."
+
+    if name in {"bodyRef", "tableRef"}:
+        return "Ref-like prop exposed by the component for advanced integrations."
+
+    return "Public DataTable property available as both a constructor keyword argument and an instance attribute."
+
+
+def is_style_driven_datatable_name(name, *, canonical_name=None):
+    """Return whether a DataTable prop or alias is primarily style-driven."""
+
+    target = canonical_name or name
+    return target in DATA_TABLE_STYLE_DRIVEN_NAMES
+
+
+def split_rows_by_style(rows, *, canonical_key=None):
+    """Split rows into functionality-driven and style-driven groups."""
+
+    functionality_rows = []
+    style_rows = []
+
+    for row in rows:
+        canonical_name = row.get(canonical_key) if canonical_key else row.get("name")
+        if is_style_driven_datatable_name(row.get("name"), canonical_name=canonical_name):
+            style_rows.append(row)
+        else:
+            functionality_rows.append(row)
+
+    return functionality_rows, style_rows
+
+
+def build_datatable_surface_rows():
+    """Build a combined keyword-argument and attribute table for DataTable."""
+
+    rows = []
+    for name, prop_meta in DATA_TABLE_METADATA.items():
+        kind = "internal" if name == "setProps" else "prop / attribute"
+        rows.append(
+            {
+                "rowId": f"prop::{name}",
+                "name": name,
+                "kind": kind,
+                "canonicalName": name,
+                "type": format_metadata_type(prop_meta.get("type")),
+                "default": format_metadata_default(prop_meta),
+                "description": describe_datatable_prop(name, prop_meta),
+            }
+        )
+
+    for alias, canonical in sorted(dmdt._PROP_ALIASES.items()):
+        canonical_meta = DATA_TABLE_METADATA.get(canonical, {})
+        rows.append(
+            {
+                "rowId": f"alias::{alias}",
+                "name": alias,
+                "kind": "python alias",
+                "canonicalName": canonical,
+                "type": format_metadata_type(canonical_meta.get("type")),
+                "default": "",
+                "description": f"Python-friendly alias for `{canonical}` accepted by `DataTable(...)` and fluent prop-update helpers.",
+            }
+        )
+
+    return rows
+
+
+def build_generated_datatable_parameter_rows():
+    """Build the canonical generated DataTable parameter table from `DataTable.py`."""
+
+    rows = []
+    for name in read_generated_datatable_parameter_names():
+        prop_meta = DATA_TABLE_METADATA.get(name, {})
+        rows.append(
+            {
+                "rowId": f"generated::{name}",
+                "name": name,
+                "kind": "generated prop",
+                "canonicalName": name,
+                "type": format_metadata_type(prop_meta.get("type")),
+                "default": format_metadata_default(prop_meta),
+                "description": describe_datatable_prop(name, prop_meta),
+            }
+        )
+    return rows
+
+
+def build_datatable_api_item():
+    """Return the enriched API-reference entry for DataTable."""
+
+    method_summary_rows = [
+        {
+            "name": f"{method['signature']}",
+            "description": method["description"],
+            "type": f"method -> {method['returns']}",
+        }
+        for method in DATA_TABLE_METHOD_DETAILS
+    ]
+
+    return {
+        "id": "api-datatable",
+        "name": "DataTable",
+        "kind": "component",
+        "signature": "dmdt.DataTable(*args, **kwargs)",
+        "description": (
+            "The main Dash component. Use it to render records, define columns, "
+            "control selection, search, sorting, pagination, row expansion, "
+            "and callback payloads from a single Python API."
+        ),
+        "returns": "Returns a Dash component instance with chainable Python helpers.",
+        "methods": method_summary_rows,
+        "method_details": DATA_TABLE_METHOD_DETAILS,
+        "surface_rows": build_datatable_surface_rows(),
+        "all_parameters_rows": build_generated_datatable_parameter_rows(),
+    }
+
+
+API_REFERENCE_ITEMS = [
+    build_datatable_api_item(),
+    *API_REFERENCE_ITEMS[1:],
 ]
 
 
@@ -1410,6 +3082,298 @@ def make_advanced_controls_demo_table():
             striped=True,
         )
     )
+
+
+def build_stock_portfolio_code():
+    return "\n".join(
+        [
+            "def load_stock_portfolio_record(symbol, row_id):",
+            "    ticker = yf.Ticker(symbol)",
+            '    history = ticker.history(period="3mo")["Close"].dropna().tolist()',
+            "    return {",
+            '        "id": row_id,',
+            '        "ticker": ticker.info["displayName"],',
+            '        "_queryTicker": symbol,',
+            '        "Exchange": ticker.fast_info["exchange"],',
+            '        "sector": ticker.info["sector"],',
+            '        "lastValue": ticker.analyst_price_targets["current"],',
+            '        "marketCap": ticker.fast_info["marketCap"],',
+            '        "priceTargetLow": ticker.analyst_price_targets["low"],',
+            '        "priceTargetMedian": ticker.analyst_price_targets["median"],',
+            '        "priceTargetHigh": ticker.analyst_price_targets["high"],',
+            '        "sparkline": history,',
+            '        "sparklineLabel": history,',
+            '        "sparklineColor": "blue",',
+            "    }",
+            "",
+            "stock_records = [",
+            "    load_stock_portfolio_record(symbol, row_id)",
+            "    for row_id, symbol in enumerate(STOCK_PORTFOLIO_DEFAULT_TICKERS, start=1)",
+            "]",
+            "",
+            "portfolio_table = (",
+            "    dmdt.DataTable(",
+            '        id="stock-portfolio-table",',
+            "        data=stock_records,",
+            "        columns=STOCK_PORTFOLIO_COLUMNS,",
+            '        idAccessor="id",',
+            '        paginationMode="none",',
+            "    )",
+            "    .update_layout(",
+            '        radius="lg",',
+            "        withTableBorder=True,",
+            "        withColumnBorders=True,",
+            "        striped=True,",
+            "        pinFirstColumn=True,",
+            "        textSelectionDisabled=True,",
+            "    )",
+            "    .update_columns(",
+            '        selector="ticker",',
+            '        title="Stock ticker",',
+            "        width=140,",
+            "        editable=True,",
+            '        editor=dmc.TextInput(label="Stock ticker", placeholder="e.g. NVDA"),',
+            '        cellsStyle={"fontWeight": 700, "letterSpacing": "0.04em", "textTransform": "uppercase"},',
+            "    )",
+            "    .update_columns(selector=\"Exchange\", title=\"Exchange\", width=120)",
+            "    .update_columns(selector=\"sector\", title=\"Sector\", width=190)",
+            "    .update_columns(",
+            '        selector="lastValue",',
+            '        title="Last value",',
+            '        presentation="currency",',
+            '        currency="USD",',
+            '        textAlign="right",',
+            "        width=130,",
+            '        cellsStyle={"fontVariantNumeric": "tabular-nums"},',
+            "    )",
+            "    .update_columns(",
+            '        selector="marketCap",',
+            '        title="Market cap",',
+            '        presentation="currency",',
+            '        currency="USD",',
+            '        textAlign="right",',
+            "        width=150,",
+            '        cellsStyle={"fontVariantNumeric": "tabular-nums"},',
+            "    )",
+            "    .update_columns(",
+            '        selector=["priceTargetLow", "priceTargetMedian", "priceTargetHigh"],',
+            '        presentation="currency",',
+            '        currency="USD",',
+            '        textAlign="right",',
+            "        width=120,",
+            '        cellsStyle={"fontVariantNumeric": "tabular-nums"},',
+            "    )",
+            "    .update_columns(selector=\"priceTargetLow\", title=\"Low\")",
+            "    .update_columns(selector=\"priceTargetMedian\", title=\"Median\", cellsStyle={\"fontWeight\": 700})",
+            "    .update_columns(selector=\"priceTargetHigh\", title=\"High\")",
+            "    .update_columns(",
+            '        selector="sparkline",',
+            '        title="3M history",',
+            "        width=160,",
+            '        render=dmc.Sparkline(data="{sparkline}", color="{sparklineColor}", w=140, h=34),',
+            "    )",
+            "    .group_columns(",
+            '        dmdt.ColumnGroup(',
+            '            "snapshot",',
+            '            title="Snapshot",',
+            '            columns=["ticker", "Exchange", "sector", "lastValue", "marketCap"],',
+            "        ),",
+            '        dmdt.ColumnGroup(',
+            '            "price-target",',
+            '            title="Price target",',
+            '            textAlign="center",',
+            '            columns=["priceTargetLow", "priceTargetMedian", "priceTargetHigh"],',
+            "        ),",
+            '        dmdt.ColumnGroup(',
+            '            "history",',
+            '            title="History",',
+            '            columns=["sparkline"],',
+            "        )",
+            "    )",
+            "    .group_columns(",
+            '        selector="snapshot",',
+            '        style={"backgroundColor": "var(--mantine-color-gray-0)"},',
+            "    )",
+            "    .group_columns(",
+            '        selector="price-target",',
+            '        style={"backgroundColor": "var(--mantine-color-blue-0)"},',
+            "    )",
+            "    .group_columns(",
+            '        selector="history",',
+            '        style={"backgroundColor": "var(--mantine-color-green-0)"},',
+            "    )",
+            ")",
+            "",
+            "# In the docs app, a callback reloads the live rows on page load and",
+            "# re-hydrates the table after ticker edits.",
+        ]
+    )
+
+
+def make_stock_portfolio_demo_table(data=None, *, fetching=False):
+    columns = deepcopy(STOCK_PORTFOLIO_COLUMNS)
+
+    table_data = deepcopy(STOCK_PORTFOLIO_RECORDS if data is None else data)
+
+    table = (
+        dmdt.DataTable(
+            id="stock-portfolio-table",
+            data=table_data,
+            columns=columns,
+            idAccessor="id",
+            paginationMode="none",
+            fetching=fetching,
+        )
+        .update_layout(
+            radius="lg",
+            withTableBorder=True,
+            withColumnBorders=True,
+            striped=True,
+            pinFirstColumn=True,
+            textSelectionDisabled=True,
+            minHeight=260,
+            loadingText="Loading live yfinance data...",
+            loaderType="dots",
+            loaderColor="blue",
+        )
+        .update_columns(
+            selector="ticker",
+            title="Stock ticker",
+            width=140,
+            cellsStyle={
+                "fontWeight": 700,
+                "letterSpacing": "0.04em",
+                "textTransform": "uppercase",
+            },
+        )
+        .update_columns(
+            selector="Exchange",
+            title="Exchange",
+            width=120,
+        )
+        .update_columns(
+            selector="sector",
+            title="Sector",
+            width=190,
+            ellipsis=True,
+        )
+        .update_columns(
+            selector="lastValue",
+            title="Last value",
+            presentation="currency",
+            currency="USD",
+            textAlign="right",
+            width=130,
+            cellsStyle={"fontVariantNumeric": "tabular-nums"},
+        )
+        .update_columns(
+            selector="marketCap",
+            title="Market cap",
+            presentation="currency",
+            currency="USD",
+            textAlign="right",
+            width=150,
+            cellsStyle={"fontVariantNumeric": "tabular-nums"},
+        )
+        .update_columns(
+            selector=["priceTargetLow", "priceTargetMedian", "priceTargetHigh"],
+            presentation="currency",
+            currency="USD",
+            textAlign="right",
+            width=120,
+            cellsStyle={"fontVariantNumeric": "tabular-nums"},
+        )
+        .update_columns(selector="priceTargetLow", title="Low")
+        .update_columns(
+            selector="priceTargetMedian",
+            title="Median",
+            cellsStyle={
+                "fontVariantNumeric": "tabular-nums",
+                "fontWeight": 700,
+            },
+        )
+        .update_columns(selector="priceTargetHigh", title="High")
+        .group_columns(
+            dmdt.ColumnGroup(
+                "snapshot",
+                title="Snapshot",
+                columns=["ticker", "Exchange", "sector", "lastValue", "marketCap"],
+            ),
+            dmdt.ColumnGroup(
+                "price-target",
+                title="Price target",
+                textAlign="center",
+                columns=["priceTargetLow", "priceTargetMedian", "priceTargetHigh"],
+            ),
+            dmdt.ColumnGroup(
+                "history",
+                title="History",
+                columns=["sparkline"],
+            )
+        )
+        .group_columns(
+            selector="snapshot",
+            style={"backgroundColor": "var(--mantine-color-gray-0)"},
+        )
+        .group_columns(
+            selector="price-target",
+            style={"backgroundColor": "var(--mantine-color-blue-0)"},
+        )
+        .group_columns(
+            selector="history",
+            style={"backgroundColor": "var(--mantine-color-green-0)"},
+        )
+    )
+
+    if USE_FULL_RUNTIME_DEMOS:
+        table = table.update_columns(
+            selector="ticker",
+            editable=True,
+            editor=dmc.TextInput(
+                label="Stock ticker",
+                placeholder="e.g. NVDA",
+                size="xs",
+            ),
+        )
+
+    return table.update_columns(
+        selector="sparkline",
+        title="3M history",
+        width=160,
+        render=dmc.Sparkline(
+            data="{sparkline}",
+            color="{sparklineColor}",
+            w=140,
+            h=34,
+        ),
+    )
+
+
+def resolve_stock_portfolio_symbols(edited_rows, current_rows):
+    current_by_id = {
+        str(row.get("id")): row
+        for row in current_rows or []
+    }
+    next_symbols = []
+    ticker_changed = False
+
+    for index, row in enumerate(edited_rows or [], start=1):
+        row_id = str(row.get("id") or index)
+        current_row = current_by_id.get(row_id, {})
+        edited_value = str(row.get("ticker") or "").strip()
+        current_value = str(current_row.get("ticker") or "").strip()
+
+        if edited_value and edited_value != current_value:
+            ticker_changed = True
+            next_symbols.append(edited_value)
+        else:
+            next_symbols.append(
+                current_row.get("_queryTicker")
+                or normalize_stock_ticker(edited_value)
+                or STOCK_PORTFOLIO_DEFAULT_TICKERS[index - 1]
+            )
+
+    return next_symbols, ticker_changed
 
 
 def build_server_pagination_code():
@@ -3547,6 +5511,228 @@ def category_divider(title, description, *, category_id=None):
     )
 
 
+def make_api_reference_table(rows, *, columns=None, id_accessor="name"):
+    """Render an API reference table using the provided column configuration."""
+
+    return dmdt.DataTable(
+        data=rows,
+        columns=columns or API_REFERENCE_TABLE_COLUMNS,
+        idAccessor=id_accessor,
+        defaultColumnProps=dmdt.Column(ellipsis=False),
+        paginationMode="none",
+        withTableBorder=True,
+        withColumnBorders=True,
+        striped=True,
+        highlightOnHover=False,
+        verticalAlign="top",
+        tableProps={"style": {"tableLayout": "fixed"}},
+        radius="md",
+        noRecordsText="No documented entries.",
+    )
+
+
+def make_api_method_card(method):
+    """Render a deeper documentation block for one fluent method."""
+
+    children = [
+        dmc.Title(method["name"], order=5),
+        dmc.Code(method["signature"], block=True),
+        dmc.Text(method["description"], size="sm", c="dimmed"),
+        dmc.Alert(f"Returns `{method['returns']}`.", color="gray", variant="light"),
+    ]
+
+    if method.get("parameters"):
+        children.extend(
+            [
+                dmc.Text("Parameters", fw=700, size="sm"),
+                make_api_reference_table(
+                    method["parameters"],
+                    columns=API_REFERENCE_PARAMETER_COLUMNS,
+                ),
+            ]
+        )
+
+    if method.get("notes"):
+        children.extend(
+            [
+                dmc.Text("Notes", fw=700, size="sm"),
+                highlight_points(method["notes"]),
+            ]
+        )
+
+    return dmc.Paper(
+        dmc.Stack(children, gap="md"),
+        withBorder=True,
+        radius="md",
+        p="md",
+    )
+
+
+def make_api_reference_item(item):
+    """Render one public API item with deep method and API-surface tables."""
+
+    children = [
+        dmc.Group(
+            [
+                dmc.Title(item["name"], order=3),
+                dmc.Badge(item["kind"], variant="light", color="blue"),
+            ],
+            justify="space-between",
+            align="center",
+        ),
+        dmc.Text(item["description"], size="sm", c="dimmed"),
+        dmc.Code(item["signature"], block=True),
+        dmc.Alert(item["returns"], color="gray", variant="light"),
+    ]
+
+    functionality_surface_rows, style_surface_rows = split_rows_by_style(
+        item.get("surface_rows", []),
+        canonical_key="canonicalName",
+    )
+    functionality_parameter_rows, style_parameter_rows = split_rows_by_style(
+        item.get("all_parameters_rows", []),
+        canonical_key="canonicalName",
+    )
+
+    if item.get("methods"):
+        children.extend(
+            [
+                dmc.Title("Fluent Methods", order=4),
+                make_api_reference_table(item["methods"]),
+            ]
+        )
+
+    if item.get("method_details"):
+        children.extend(
+            [
+                dmc.Title("Method Details", order=4),
+                dmc.Stack(
+                    [make_api_method_card(method) for method in item["method_details"]],
+                    gap="md",
+                ),
+            ]
+        )
+
+    if item.get("surface_rows"):
+        children.extend(
+            [
+                dmc.Title("Functionality-Driven Keyword Arguments and Attributes", order=4),
+                dmc.Text(
+                    "These entries control data flow, interaction, callbacks, selection, sorting, pagination, expansion, loading state, and other table behavior.",
+                    size="sm",
+                    c="dimmed",
+                ),
+                make_api_reference_table(
+                    functionality_surface_rows,
+                    columns=API_REFERENCE_SURFACE_COLUMNS,
+                    id_accessor="rowId",
+                ),
+                dmc.Title("Style-Driven Keyword Arguments and Attributes", order=4),
+                dmc.Text(
+                    "These entries primarily affect layout, spacing, borders, colors, sizing, and other visual presentation concerns.",
+                    size="sm",
+                    c="dimmed",
+                ),
+                make_api_reference_table(
+                    style_surface_rows,
+                    columns=API_REFERENCE_SURFACE_COLUMNS,
+                    id_accessor="rowId",
+                ),
+            ]
+        )
+    if item.get("all_parameters_rows"):
+        children.extend(
+            [
+                dmc.Title("All Functionality Parameters from DataTable.py", order=4),
+                dmc.Text(
+                    "This exhaustive table is sourced from the generated component in `dash_mantine_datatable/DataTable.py` and lists the canonical functionality-oriented constructor parameters exposed by the component.",
+                    size="sm",
+                    c="dimmed",
+                ),
+                make_api_reference_table(
+                    functionality_parameter_rows,
+                    columns=API_REFERENCE_SURFACE_COLUMNS,
+                    id_accessor="rowId",
+                ),
+                dmc.Title("All Style Parameters from DataTable.py", order=4),
+                dmc.Text(
+                    "This exhaustive table lists the canonical style- and layout-oriented constructor parameters exposed by the generated component.",
+                    size="sm",
+                    c="dimmed",
+                ),
+                make_api_reference_table(
+                    style_parameter_rows,
+                    columns=API_REFERENCE_SURFACE_COLUMNS,
+                    id_accessor="rowId",
+                ),
+            ]
+        )
+    elif item.get("keyword_arguments"):
+        children.extend(
+            [
+                dmc.Title("Keyword Arguments", order=4),
+                make_api_reference_table(item["keyword_arguments"]),
+            ]
+        )
+
+    return html.Div(
+        dmc.Paper(
+            dmc.Stack(children, gap="md"),
+            withBorder=True,
+            radius="lg",
+            p="lg",
+            shadow="xs",
+        ),
+        id=item["id"],
+        style={"scrollMarginTop": "1rem"},
+    )
+
+
+def make_api_reference_section():
+    """Render the curated public Python API reference for the usage page."""
+
+    overview_cards = html.Div(
+        [
+            html.A(
+                dmc.Paper(
+                    dmc.Stack(
+                        [
+                            dmc.Text(item["name"], fw=700, size="sm"),
+                            dmc.Text(item["signature"], size="xs", c="dimmed"),
+                            dmc.Text(item["description"], size="sm", c="dimmed"),
+                        ],
+                        gap="xs",
+                    ),
+                    withBorder=True,
+                    radius="md",
+                    p="md",
+                ),
+                href=f"#{item['id']}",
+                style={"textDecoration": "none", "color": "inherit"},
+            )
+            for item in API_REFERENCE_ITEMS
+        ],
+        style={
+            "display": "grid",
+            "gridTemplateColumns": "repeat(auto-fit, minmax(240px, 1fr))",
+            "gap": "1rem",
+        },
+    )
+
+    return dmc.Stack(
+        [
+            dmc.Alert(
+                "This reference is intentionally curated around the props and attributes people reach for most often first, so the page stays approachable.",
+                color="blue",
+                variant="light",
+            ),
+            overview_cards,
+            *[make_api_reference_item(item) for item in API_REFERENCE_ITEMS],
+        ],
+        gap="xl",
+    )
+
+
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 app.title = "DashMantineDatatable Demo"
@@ -3554,9 +5740,9 @@ app.title = "DashMantineDatatable Demo"
 navigation_panel = dmc.Paper(
     dmc.Stack(
         [
-            dmc.Text("Examples", fw=700, tt="uppercase", c="dimmed", size="xs"),
+            dmc.Text("Docs", fw=700, tt="uppercase", c="dimmed", size="xs"),
             dmc.Text(
-                "Jump to a broader category or a specific example section.",
+                "Jump to a reference block or a specific example section.",
                 size="sm",
                 c="dimmed",
             ),
@@ -3626,8 +5812,8 @@ app.layout = dmc.MantineProvider(
                         dmc.Title("DashMantineDatatable", order=1),
                         dmc.Text(
                             "This usage page is organized like a Dash Mantine Components "
-                            "docs entry: the examples are grouped into broad categories, "
-                            "each example leads with a live demo, and the source lives in "
+                            "docs entry: it opens with a curated API reference, then moves "
+                            "through grouped live examples, and keeps longer source in "
                             "accordions so the page stays easy to scan.",
                             c="dimmed",
                             maw=720,
@@ -3698,6 +5884,30 @@ app.layout = dmc.MantineProvider(
                         navigation_panel,
                     ],
                     gap="md",
+                ),
+                category_divider(
+                    "API reference",
+                    "Start here when you want definitions, fluent methods, and the most commonly used keyword arguments for the public Python API.",
+                    category_id="category-api-reference",
+                ),
+                demo_section(
+                    "0. Python API reference",
+                    "This section documents each public item exported by the package, with special emphasis on the attributes and keyword arguments people tend to use first.",
+                    make_api_reference_section(),
+                    section_id="section-api",
+                    methods=[
+                        "DataTable",
+                        "Column",
+                        "ColumnGroup",
+                        "SelectionConfig",
+                        "PaginationConfig",
+                        "RowExpansionConfig",
+                    ],
+                    highlights=[
+                        "DataTable lists fluent methods, common keyword arguments, and the instance attributes most likely to appear in callbacks.",
+                        "Helper builders are documented as plain dictionary factories so it is clear what each one returns and when to reach for it.",
+                        "The reference tables are curated instead of exhaustive, which keeps the page readable while still making the component easy to pick up.",
+                    ],
                 ),
                 category_divider(
                     "Core workflows",
@@ -4826,7 +7036,72 @@ app.layout = dmc.MantineProvider(
                     ],
                 ),
                 demo_section(
-                    "20. Custom loaders and empty icons",
+                    "20. Stock portfolio",
+                    "This portfolio demo combines a pinned ticker editor, exchange and market-cap snapshot fields, grouped analyst targets, and a compact 3-month history column. It loads live rows from yfinance on page load and re-hydrates the table after ticker edits.",
+                    dmc.Stack(
+                        [
+                            dmc.Alert(
+                                "The demo loads live rows from yfinance on page load. Edit the first column with a ticker symbol to re-hydrate that row with exchange, sector, targets, market cap, and recent close history.",
+                                color="blue",
+                                variant="light",
+                            ),
+                            dcc.Store(
+                                id="stock-portfolio-data-store",
+                                data=[],
+                            ),
+                            dcc.Store(
+                                id="stock-portfolio-pending-symbols",
+                                data=[],
+                            ),
+                            dcc.Interval(
+                                id="stock-portfolio-loader",
+                                interval=250,
+                                n_intervals=0,
+                                max_intervals=1,
+                            ),
+                            dmc.Text(
+                                id="stock-portfolio-status",
+                                size="sm",
+                                c="dimmed",
+                                children=STOCK_PORTFOLIO_STATUS,
+                            ),
+                            make_stock_portfolio_demo_table([], fetching=True),
+                            source_code_accordion(
+                                "Show Python for the stock portfolio example",
+                                code=build_stock_portfolio_code(),
+                                description=(
+                                    "This demo now uses a live `yfinance` loader. Keep the "
+                                    "row ID stable, treat the edited ticker cell as the lookup "
+                                    "key, and rewrite the rest of the record from the remote "
+                                    "payload."
+                                ),
+                            ),
+                        ],
+                        gap="md",
+                    ),
+                    dmc.Text(
+                        "Pinned symbols make the table easier to scan horizontally, while the snapshot fields and grouped target columns keep the yfinance payload readable inside one wide grid.",
+                        c="dimmed",
+                        size="sm",
+                    ),
+                    section_id="section-stock-portfolio",
+                    methods=[
+                        "editable",
+                        "editor",
+                        "pinFirstColumn",
+                        "group_columns()",
+                        "ColumnGroup()",
+                        "render",
+                    ],
+                    highlights=[
+                        "A pinned editable ticker column doubles as the live lookup key for yfinance reloads.",
+                        "Exchange, sector, last value, and market cap mirror the fast-info and profile fields you will hydrate from yfinance.",
+                        "Grouped low, median, and high targets make the analyst data easier to compare without widening the table too much.",
+                        "A sparkline render keeps recent close-history compact enough to live directly inside the grid.",
+                    ],
+                ),
+                demo_section(
+                    "21. Custom loaders and empty icons",
                     "Component-based states are useful when the table needs to feel more branded than the built-in defaults. These examples show both a custom loading overlay and the lightweight noRecordsIcon path.",
                     dmc.Stack(
                         [
@@ -4890,6 +7165,63 @@ app.layout = dmc.MantineProvider(
 @callback(Output("selection-output", "children"), Input("selection-table", "selectedRecordIds"))
 def show_selected_rows(selected_ids):
     return f"Selected record ids: {selected_ids or []}"
+
+
+@callback(
+    Output("stock-portfolio-status", "children"),
+    Output("stock-portfolio-pending-symbols", "data"),
+    Output("stock-portfolio-table", "fetching"),
+    Input("stock-portfolio-loader", "n_intervals"),
+    Input("stock-portfolio-table", "data"),
+    State("stock-portfolio-data-store", "data"),
+    prevent_initial_call=True,
+)
+def queue_stock_portfolio_load(n_intervals, edited_rows, current_rows):
+    del n_intervals
+
+    triggered_id = callback_context.triggered_id
+    if triggered_id == "stock-portfolio-loader":
+        return (
+            "Loading live yfinance data...",
+            STOCK_PORTFOLIO_DEFAULT_TICKERS,
+            True,
+        )
+
+    if triggered_id != "stock-portfolio-table":
+        return no_update, no_update, no_update
+
+    if not edited_rows or edited_rows == current_rows:
+        return no_update, no_update, no_update
+
+    next_symbols, ticker_changed = resolve_stock_portfolio_symbols(
+        edited_rows,
+        current_rows,
+    )
+    if not ticker_changed:
+        return no_update, no_update, no_update
+
+    return (
+        f"Loading live yfinance data for {', '.join(next_symbols)}...",
+        next_symbols,
+        True,
+    )
+
+
+@callback(
+    Output("stock-portfolio-data-store", "data"),
+    Output("stock-portfolio-table", "data"),
+    Output("stock-portfolio-status", "children", allow_duplicate=True),
+    Output("stock-portfolio-pending-symbols", "data", allow_duplicate=True),
+    Output("stock-portfolio-table", "fetching", allow_duplicate=True),
+    Input("stock-portfolio-pending-symbols", "data"),
+    prevent_initial_call=True,
+)
+def hydrate_stock_portfolio_load(symbols):
+    if not symbols:
+        return no_update, no_update, no_update, no_update, no_update
+
+    records, status = load_stock_portfolio_records(symbols)
+    return records, records, status, [], False
 
 
 @callback(

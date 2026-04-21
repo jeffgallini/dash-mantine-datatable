@@ -32,6 +32,11 @@ setup(
         "dash-mantine-components>=2.6.0",
         "dash-iconify",
     ],
+    extras_require={
+        "demo": [
+            "yfinance>=0.2.54",
+        ],
+    },
     classifiers=[
         "Framework :: Dash",
         "Programming Language :: Python :: 3",

@@ -12,6 +12,13 @@ grouping, rows, selection, pagination, sorting, and search.
 pip install dash-mantine-datatable
 ```
 
+Install the optional demo dependency bundle when you want to run the live
+market-data examples from `usage.py`:
+
+```bash
+pip install "dash-mantine-datatable[demo]"
+```
+
 ## Quick Start
 
 ```python
