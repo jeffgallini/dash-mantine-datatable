@@ -36,6 +36,9 @@ setup(
         "demo": [
             "yfinance>=0.2.54",
         ],
+        "docs": [
+            "pdoc>=16,<17",
+        ],
     },
     classifiers=[
         "Framework :: Dash",

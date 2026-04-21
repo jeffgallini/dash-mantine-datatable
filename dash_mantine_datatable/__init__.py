@@ -1,3 +1,35 @@
+"""Dash wrapper for Mantine DataTable with Python-friendly helpers.
+
+Description
+-----------
+This package exposes a `DataTable` component for Dash plus a small set of
+helper factories that make common table configuration more discoverable from
+Python. The usual entry point is `DataTable(...)`, while `Column(...)`,
+`ColumnGroup(...)`, `SelectionConfig(...)`, `PaginationConfig(...)`, and
+`RowExpansionConfig(...)` help you build the nested dictionaries that the
+component expects.
+
+Notes
+-----
+The public API is intentionally chainable. Most configuration helpers return
+the current `DataTable` instance so you can start with a minimal table and add
+columns, row rules, grouping, pagination, and selection step by step.
+
+Examples
+--------
+>>> import dash_mantine_datatable as dmdt
+>>> table = dmdt.DataTable(
+...     data=[{"id": 1, "name": "Avery", "salary": 128000}],
+...     columns=[
+...         dmdt.Column("name", title="Employee"),
+...         dmdt.Column("salary", presentation="currency", currency="USD"),
+...     ],
+...     radius="lg",
+... )
+>>> table.update_selection(selectionTrigger="checkbox")
+DataTable(...)
+"""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -229,41 +261,78 @@ def _with_rule(prop_name: str, current: Any, value: Any, selector: Any) -> Any:
 
 def Column(accessor: str | None = None, /, **kwargs: Any) -> dict[str, Any]:
     """
-    Build a column-definition dictionary for `DataTable`.
+    Description
+    -----------
+    Build a column-definition dictionary for `DataTable(columns=[...])`.
+    This helper is the quickest way to create readable column configs from
+    Python without manually repeating `{"accessor": ...}` for every column.
 
     Parameters
     ----------
-    accessor : str, optional
-        Record key rendered by the column.
-    **kwargs
-        Additional column properties.
-
-        Commonly used keyword arguments include:
-
-        - `title`
-        - `presentation`
-        - `sortable`
-        - `width`
-        - `textAlign`
-        - `render`
-        - `editable`
-        - `editor`
-        - `filter`
-        - `cellsStyle`
-        - `titleStyle`
-        - `draggable`
-        - `toggleable`
-        - `resizable`
+    accessor : str | None, optional
+        Description: Record key rendered by the column. This becomes the
+        column identifier used by helpers such as
+        `table.update_columns(selector="salary", ...)`.
+        Example: `Column("salary")`.
+    title : str, optional
+        Description: Header label shown above the column. If omitted, the
+        frontend falls back to the accessor or its built-in title formatting.
+        Example: `title="Annual Salary"`.
+    presentation : str, optional
+        Description: Built-in display mode used to format cell values.
+        Expected inputs: `'text'`, `'number'`, `'currency'`, `'date'`,
+        `'datetime'`, `'badge'`, `'link'`, `'code'`, `'json'`, `'progress'`.
+        Example: `presentation="currency"`.
+    sortable : bool, optional
+        Description: Enables sorting for the column.
+        Example: `sortable=True`.
+    editable : bool, optional
+        Description: Enables double-click editing for the column. Pair this
+        with `editor` when you want a custom Dash input component.
+        Example: `editable=True`.
+    editor : Any, optional
+        Description: Dash component used as the in-place editor for editable
+        cells.
+        Example: `editor=dmc.NumberInput(min=0, thousandSeparator=",")`.
+    render : Any, optional
+        Description: Dash component or renderer payload used for custom cell
+        content.
+        Example: `render=dmc.Text("View", c="blue")`.
+    filter : Any, optional
+        Description: Dash component rendered in the column filter popover.
+        Example: `filter=dmc.TextInput(placeholder="Filter names")`.
+    textAlign : str, optional
+        Description: Horizontal alignment for cell content.
+        Expected inputs: values accepted by Mantine/DataTable such as
+        `'left'`, `'center'`, `'right'`.
+        Example: `textAlign="right"`.
+    width : int | float | str, optional
+        Description: Column width. You can pass a numeric pixel value or a CSS
+        width string.
+        Example: `width=140`.
+    **kwargs : Any
+        Description: Any additional column properties supported by the
+        frontend, including `cellsStyle`, `titleStyle`, `draggable`,
+        `toggleable`, and `resizable`.
+        Example: `resizable=True`.
 
     Returns
     -------
     dict
         A Dash-safe column configuration dictionary.
 
+    Notes
+    -----
+    The helper does not validate every possible column key. It simply builds a
+    plain dictionary, which makes it safe to use with existing Mantine
+    DataTable column options and this package's Dash-specific additions.
+
     Examples
     --------
     >>> Column("salary", title="Salary", presentation="currency", currency="USD")
     {'accessor': 'salary', 'title': 'Salary', 'presentation': 'currency', 'currency': 'USD'}
+    >>> Column("status", presentation="badge", badgeColorAccessor="statusColor")
+    {'accessor': 'status', 'presentation': 'badge', 'badgeColorAccessor': 'statusColor'}
     """
     column = {}
     if accessor is not None:
@@ -281,24 +350,54 @@ def ColumnGroup(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """
-    Build a grouped-header definition for `DataTable`.
+    Description
+    -----------
+    Build a grouped-header definition for `DataTable(groups=[...])`. Use this
+    when you want multiple header rows, such as a "Compensation" group above
+    salary and bonus columns.
 
     Parameters
     ----------
-    group_id : str, optional
-        Stable identifier for the group.
-    columns : list, optional
-        Column references or column dictionaries attached to the group.
-    groups : list of dict, optional
-        Nested child groups for multi-row grouped headers.
-    **kwargs
-        Additional group properties such as `title`, `style`, or
-        `headerStyle`.
+    group_id : str | None, optional
+        Description: Stable identifier for the group. This is the id you use
+        later with `table.group_columns(selector="compensation", ...)`.
+        Example: `group_id="compensation"`.
+    columns : list[Any] | None, optional
+        Description: Column references attached directly to this group. Each
+        item may be an accessor string like `"salary"` or a full column
+        dictionary.
+        Example: `columns=["salary", "bonus"]`.
+    groups : list[dict[str, Any]] | None, optional
+        Description: Nested child groups for multi-row grouped headers.
+        Example: `groups=[ColumnGroup("cash", columns=["salary", "bonus"])]`.
+    title : str, optional
+        Description: Visible header label for the group.
+        Example: `title="Compensation"`.
+    style : dict, optional
+        Description: Inline style mapping applied to the group header cell.
+        Example: `style={"textAlign": "center"}`.
+    headerStyle : dict, optional
+        Description: Header-specific style mapping forwarded to the frontend.
+        Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
+    **kwargs : Any
+        Description: Any additional grouped-header properties supported by the
+        frontend.
+        Example: `textAlign="center"`.
 
     Returns
     -------
     dict
         A grouped-header configuration dictionary.
+
+    Notes
+    -----
+    Group dictionaries are plain Python objects, so they can be freely mixed
+    with `Column(...)` output and raw dictionaries in the same `groups` list.
+
+    Examples
+    --------
+    >>> ColumnGroup("profile", title="Profile", columns=["name", "team"])
+    {'id': 'profile', 'columns': ['name', 'team'], 'title': 'Profile'}
     """
     group = {}
     if group_id is not None:
@@ -313,86 +412,179 @@ def ColumnGroup(
 
 def SelectionConfig(**kwargs: Any) -> dict[str, Any]:
     """
-    Build a compact selection-configuration dictionary.
+    Description
+    -----------
+    Build a compact selection configuration dictionary that you can unpack into
+    `DataTable(...)` or pass to `table.update_selection(...)`.
 
     Parameters
     ----------
-    **kwargs
-        Selection properties to forward to `DataTable`.
-
-        Commonly used keyword arguments include:
-
-        - `selectionTrigger`
-        - `selectedRecordIds`
-        - `selectedRecords`
-        - `selectableRowRules`
-        - `disabledSelectionRowRules`
-        - `selectionCheckboxRules`
-        - `selectionCheckboxProps`
-        - `allRecordsSelectionCheckboxProps`
-        - `selectionColumnClassName`
-        - `selectionColumnStyle`
+    selectionTrigger : str, optional
+        Description: Enables row selection and decides how it is triggered.
+        Expected inputs: `'cell'`, `'checkbox'`.
+        Example: `selectionTrigger="checkbox"`.
+    selectedRecordIds : list[Any], optional
+        Description: Controlled list of selected row ids.
+        Example: `selectedRecordIds=[1, 4, 8]`.
+    selectedRecords : list[dict], optional
+        Description: Controlled list of selected record payloads.
+        Example: `selectedRecords=[{"id": 1, "name": "Avery"}]`.
+    selectableRowRules : bool | dict | list, optional
+        Description: Rule definition that marks which rows are selectable.
+        Example: `selectableRowRules=[{"selector": {"status": "Active"}, "value": True}]`.
+    disabledSelectionRowRules : bool | dict | list, optional
+        Description: Rule definition that disables row selection for matching
+        rows.
+        Example: `disabledSelectionRowRules=[{"selector": {"archived": True}, "value": True}]`.
+    selectionCheckboxRules : dict | list, optional
+        Description: Conditional checkbox props for the selection column.
+        Example: `selectionCheckboxRules=[{"selector": {"locked": True}, "value": {"disabled": True}}]`.
+    selectionCheckboxProps : dict, optional
+        Description: Shared props for each row-selection checkbox.
+        Example: `selectionCheckboxProps={"size": "sm"}`.
+    allRecordsSelectionCheckboxProps : dict, optional
+        Description: Props for the "select all" checkbox in the header.
+        Example: `allRecordsSelectionCheckboxProps={"aria-label": "Select all rows"}`.
+    selectionColumnClassName : str, optional
+        Description: CSS class applied to the selection column.
+        Example: `selectionColumnClassName="table-selection-col"`.
+    selectionColumnStyle : dict, optional
+        Description: Inline style mapping applied to the selection column.
+        Example: `selectionColumnStyle={"width": 44}`.
+    **kwargs : Any
+        Description: Any additional selection props supported by the
+        component.
+        Example: `keepSelectionOnPageChange=True`.
 
     Returns
     -------
     dict
         A dictionary with `None` values removed.
+
+    Notes
+    -----
+    This helper is a convenience for building clean config objects. It does
+    not mutate a table and it drops keys whose value is `None`.
+
+    Examples
+    --------
+    >>> SelectionConfig(selectionTrigger="checkbox", selectedRecordIds=[1, 2])
+    {'selectionTrigger': 'checkbox', 'selectedRecordIds': [1, 2]}
     """
     return _compact_mapping(deepcopy(kwargs))
 
 
 def PaginationConfig(**kwargs: Any) -> dict[str, Any]:
     """
-    Build a compact pagination-configuration dictionary.
+    Description
+    -----------
+    Build a compact pagination configuration dictionary for client-side or
+    server-side paging.
 
     Parameters
     ----------
-    **kwargs
-        Pagination properties to forward to `DataTable`.
-
-        Commonly used keyword arguments include:
-
-        - `page`
-        - `pageSize`
-        - `recordsPerPage`
-        - `totalRecords`
-        - `recordsPerPageOptions`
-        - `pageSizeOptions`
-        - `recordsPerPageLabel`
-        - `paginationSize`
-        - `paginationActiveTextColor`
-        - `paginationActiveBackgroundColor`
-        - `paginationWithEdges`
-        - `paginationWithControls`
+    page : int | float, optional
+        Description: Current page number in controlled pagination mode.
+        Example: `page=1`.
+    pageSize : int | float, optional
+        Description: Number of rows shown per page when using the `pageSize`
+        prop.
+        Example: `pageSize=25`.
+    recordsPerPage : int | float, optional
+        Description: Preferred page-size prop matching Mantine DataTable's API.
+        Example: `recordsPerPage=25`.
+    totalRecords : int | float, optional
+        Description: Total number of records available, typically required for
+        server-side pagination.
+        Example: `totalRecords=248`.
+    recordsPerPageOptions : list[int | float], optional
+        Description: Page-size choices shown in the footer control.
+        Example: `recordsPerPageOptions=[10, 25, 50, 100]`.
+    pageSizeOptions : list[int | float], optional
+        Description: Alternative page-size options prop.
+        Example: `pageSizeOptions=[10, 25, 50]`.
+    recordsPerPageLabel : str, optional
+        Description: Label shown next to the page-size selector.
+        Example: `recordsPerPageLabel="Rows"`.
+    paginationSize : str | int | float, optional
+        Description: Visual size of the pagination controls.
+        Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`, `'md'`,
+        `'lg'`, `'xl'`, or a numeric size when supported.
+        Example: `paginationSize="sm"`.
+    paginationActiveTextColor : str | dict, optional
+        Description: Text color for the active page button.
+        Example: `paginationActiveTextColor="white"`.
+    paginationActiveBackgroundColor : str | dict, optional
+        Description: Background color for the active page button.
+        Example: `paginationActiveBackgroundColor="blue.6"`.
+    paginationWithEdges : bool, optional
+        Description: Shows first/last page controls when `True`.
+        Example: `paginationWithEdges=True`.
+    paginationWithControls : bool, optional
+        Description: Shows previous/next controls when `True`.
+        Example: `paginationWithControls=True`.
+    **kwargs : Any
+        Description: Any additional pagination props supported by the
+        component.
+        Example: `paginationText=lambda info: f"{info['from']}-{info['to']}"`.
 
     Returns
     -------
     dict
         A dictionary with `None` values removed.
+
+    Notes
+    -----
+    For most apps you will set either `recordsPerPage` or `pageSize`, not
+    both. This helper simply forwards whatever keys you provide.
+
+    Examples
+    --------
+    >>> PaginationConfig(page=2, recordsPerPage=25, totalRecords=240)
+    {'page': 2, 'recordsPerPage': 25, 'totalRecords': 240}
     """
     return _compact_mapping(deepcopy(kwargs))
 
 
 def RowExpansionConfig(content: Any = None, /, **kwargs: Any) -> dict[str, Any]:
     """
-    Build a row-expansion configuration dictionary.
+    Description
+    -----------
+    Build a row-expansion configuration dictionary for detail panels shown
+    beneath a record.
 
     Parameters
     ----------
     content : Any, optional
-        Expansion content rendered when a row opens.
-    **kwargs
-        Additional row-expansion options.
-
-        Commonly used keyword arguments include:
-
-        - `allowMultiple`
-        - `trigger`
+        Description: Dash component or payload rendered when a row is expanded.
+        Example: `content=dmc.Text("Employee details")`.
+    allowMultiple : bool, optional
+        Description: Allows multiple rows to stay expanded at the same time.
+        Example: `allowMultiple=True`.
+    trigger : str, optional
+        Description: Chooses how expansion is toggled.
+        Expected inputs: frontend-supported trigger values such as `'click'`
+        when available.
+        Example: `trigger="click"`.
+    **kwargs : Any
+        Description: Any additional row-expansion props supported by the
+        component.
+        Example: `collapseProps={"transitionDuration": 150}`.
 
     Returns
     -------
     dict
         A dictionary with `None` values removed.
+
+    Notes
+    -----
+    This helper is especially useful when you want to keep expansion config in
+    one place and reuse it across multiple table instances.
+
+    Examples
+    --------
+    >>> RowExpansionConfig(content="More details", allowMultiple=True)
+    {'allowMultiple': True, 'content': 'More details'}
     """
     config = deepcopy(kwargs)
     if content is not None:
@@ -402,77 +594,178 @@ def RowExpansionConfig(content: Any = None, /, **kwargs: Any) -> dict[str, Any]:
 
 class DataTable(_GeneratedDataTable):
     """
-    Declarative Dash table component with chainable Python-side configuration helpers.
+    Description
+    -----------
+    Declarative Dash table component with chainable Python-side configuration
+    helpers. `DataTable` wraps Mantine DataTable in a Dash-friendly API that
+    works well with `dash-mantine-components`, while also adding helpers for
+    columns, grouped headers, row rules, selection, pagination, sorting, and
+    search.
 
-    `DataTable` extends the generated Dash component with a fluent API for
-    updating layout, columns, grouping, row rules, selection, pagination,
-    sorting, and search settings after construction. It also accepts a small
-    set of Python-friendly aliases such as `records` for `data`,
-    `group_by` for `groupBy`, and `dir` for `direction`.
+    If you are new to the package, the usual pattern is:
+
+    1. Pass `data` and `columns` when you construct the table.
+    2. Set `idAccessor` if your row id field is not named `id`.
+    3. Choose client-side or server-side behavior with
+       `paginationMode`, `sortMode`, and `searchMode`.
+    4. Use chainable helpers like `update_columns()` and `update_rows()` to
+       refine behavior after the base table is created.
 
     Parameters
     ----------
-    *args
-        Positional arguments forwarded to the generated Dash component.
-    **kwargs
-        Component properties forwarded to the underlying Dash component after
-        alias normalization.
-
-        Commonly used functionality-driven properties include:
-
-        - `data` : sequence of dict, optional
-          Table records rendered by the component.
-        - `columns` : sequence of dict, optional
-          Column definitions. Each item typically includes an `accessor` key.
-        - `groups` : sequence of dict, optional
-          Column-group definitions for grouped headers.
-        - `groupBy` : str or sequence of str, optional
-          Accessor or accessors used to group rows.
-        - `paginationMode` : {"client", "server", "none"}, default "client"
-          Pagination strategy.
-        - `sortMode` : {"client", "server"}, default "client"
-          Sorting strategy.
-        - `searchMode` : {"client", "server"}, default "client"
-          Search strategy.
-        - `rowExpansion` : dict, optional
-          Configuration for row-expansion content.
-        - `rowDragging` : bool or dict, optional
-          Enables drag-and-drop row reordering.
-        - `selectionTrigger` : {"cell", "checkbox"}, optional
-          Enables row selection via clicks or checkboxes.
-        - `selectedRecordIds` : sequence, optional
-          Controlled selection state.
-        - `sortStatus` : dict, optional
-          Controlled sorting descriptor.
-        - `searchQuery` : str, optional
-          Controlled search text.
-        - `page`, `pageSize`, `recordsPerPage`, `totalRecords`
-          Common controlled pagination props.
-        - `striped`, `withTableBorder`, `withColumnBorders`, `stickyHeader`
-          Frequently used presentation props.
-        - `height`, `minHeight`, `maxHeight`
-          Common sizing props for scrollable layouts.
-        - `emptyState`, `customLoader`, `noRecordsIcon`
-          Built-in state customization props.
-        - `storeColumnsKey`
-          Persists draggable, toggleable, or resizable column state.
-
-        Commonly used style-driven properties include:
-
-        - `radius`
-          Rounded-corner setting for the table container.
-        - `withTableBorder`, `withColumnBorders`, `withRowBorders`
-          Border controls for the outer table and internal grid lines.
-        - `striped`, `highlightOnHover`
-          High-value row presentation toggles.
-        - `height`, `minHeight`, `maxHeight`
-          Common sizing props for constrained layouts and scrolling regions.
-        - `horizontalSpacing`, `verticalSpacing`, `verticalAlign`
-          Cell spacing and alignment controls.
-        - `bg`, `c`, `backgroundColor`, `borderColor`
-          Mantine and explicit color props for the table container.
-        - `style`, `styles`, `className`, `classNames`, `tableClassName`
-          Root and internal style/class customization hooks.
+    id : str | dict, optional
+        Description: Dash component id used in callbacks.
+        Example: `id="employees-table"`.
+    data : list[dict], optional
+        Description: Table records. This is the preferred Dash-facing alias
+        for row data.
+        Example: `data=[{"id": 1, "name": "Avery"}]`.
+    records : list[dict], optional
+        Description: Alias for `data` kept for Mantine DataTable familiarity.
+        If both are supplied, use one source of truth.
+        Example: `records=[{"id": 1, "name": "Avery"}]`.
+    columns : list[dict], optional
+        Description: Column definitions. Each column typically has an
+        `accessor`, and may also include formatting, sorting, filtering, or
+        editing behavior.
+        Example: `columns=[Column("name"), Column("salary", presentation="currency")]`.
+    groups : list[dict], optional
+        Description: Grouped-header definitions for multi-row column headers.
+        Example: `groups=[ColumnGroup("profile", title="Profile", columns=["name", "team"])]`.
+    idAccessor : str | dict | list[str], optional
+        Description: Record identifier accessor used for selection, expansion,
+        row rules, and drag operations. Use this when your row key is not the
+        default `id`.
+        Example: `idAccessor="employeeId"`.
+    groupBy : str | list[str], optional
+        Description: Accessor or accessors used for inline row grouping.
+        Example: `groupBy="team"`.
+    childRowsAccessor : str, optional
+        Description: Accessor containing nested child rows when your data is
+        already hierarchical.
+        Example: `childRowsAccessor="children"`.
+    groupAggregations : dict, optional
+        Description: Aggregation mapping for grouped parent rows.
+        Expected inputs: built-in aggregations such as `'sum'`, `'mean'`,
+        `'median'`, `'min'`, `'max'`, `'count'`, or a custom client-side
+        function string.
+        Example: `groupAggregations={"salary": "sum"}`.
+    paginationMode : str, optional
+        Description: Chooses where pagination is handled.
+        Expected inputs: `'client'`, `'server'`, `'none'`.
+        Example: `paginationMode="server"`.
+    sortMode : str, optional
+        Description: Chooses where sorting is handled.
+        Expected inputs: `'client'`, `'server'`.
+        Example: `sortMode="client"`.
+    searchMode : str, optional
+        Description: Chooses where search filtering is handled.
+        Expected inputs: `'client'`, `'server'`.
+        Example: `searchMode="client"`.
+    searchQuery : str, optional
+        Description: Controlled search text.
+        Example: `searchQuery="platform"`.
+    searchableAccessors : list[str], optional
+        Description: Limits client-side search to specific record fields.
+        Example: `searchableAccessors=["name", "team", "role"]`.
+    page : int | float, optional
+        Description: Current page in controlled pagination mode.
+        Example: `page=1`.
+    recordsPerPage : int | float, optional
+        Description: Number of rows shown per page.
+        Example: `recordsPerPage=25`.
+    totalRecords : int | float, optional
+        Description: Total record count, usually required in server-side
+        pagination mode.
+        Example: `totalRecords=248`.
+    selectionTrigger : str, optional
+        Description: Enables selection and decides how it is triggered.
+        Expected inputs: `'cell'`, `'checkbox'`.
+        Example: `selectionTrigger="checkbox"`.
+    selectedRecordIds : list[Any], optional
+        Description: Controlled ids for selected rows.
+        Example: `selectedRecordIds=[1, 3]`.
+    rowExpansion : dict, optional
+        Description: Configuration for per-row detail panels.
+        Example: `rowExpansion=RowExpansionConfig(content=dmc.Text("Details"))`.
+    rowDragging : bool | dict, optional
+        Description: Enables drag-and-drop row reordering.
+        Example: `rowDragging=True`.
+    locale : str, optional
+        Description: Locale used for number and date formatting.
+        Example: `locale="en-US"`.
+    direction : str, optional
+        Description: Layout direction for LTR or RTL UIs.
+        Expected inputs: `'ltr'`, `'rtl'`.
+        Example: `direction="rtl"`.
+    radius : str | int | float, optional
+        Description: Border radius for the table container.
+        Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`, `'md'`,
+        `'lg'`, `'xl'`, or a numeric/CSS value.
+        Example: `radius="lg"`.
+    striped : bool, optional
+        Description: Alternates row backgrounds for easier scanning.
+        Example: `striped=True`.
+    highlightOnHover : bool, optional
+        Description: Highlights the active row on hover.
+        Example: `highlightOnHover=True`.
+    withTableBorder : bool, optional
+        Description: Draws an outer table border.
+        Example: `withTableBorder=True`.
+    withColumnBorders : bool, optional
+        Description: Draws vertical borders between columns.
+        Example: `withColumnBorders=False`.
+    withRowBorders : bool, optional
+        Description: Draws borders between body rows.
+        Example: `withRowBorders=True`.
+    height : str | int | float, optional
+        Description: Fixed table height, often used with sticky headers or
+        scrollable layouts.
+        Example: `height=420`.
+    minHeight : str | int | float, optional
+        Description: Minimum table height.
+        Example: `minHeight=240`.
+    maxHeight : str | int | float, optional
+        Description: Maximum table height before scrolling.
+        Example: `maxHeight=560`.
+    horizontalSpacing : str | int | float, optional
+        Description: Horizontal cell padding.
+        Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`, `'md'`,
+        `'lg'`, `'xl'`, or numeric values.
+        Example: `horizontalSpacing="sm"`.
+    verticalSpacing : str | int | float, optional
+        Description: Vertical cell padding.
+        Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`, `'md'`,
+        `'lg'`, `'xl'`, or numeric values.
+        Example: `verticalSpacing="xs"`.
+    verticalAlign : str, optional
+        Description: Vertical alignment for cell content.
+        Expected inputs: `'top'`, `'center'`, `'bottom'`.
+        Example: `verticalAlign="center"`.
+    bg : str | dict, optional
+        Description: Mantine background color prop for the table wrapper.
+        Example: `bg="white"`.
+    c : str | dict, optional
+        Description: Mantine text color prop for the table wrapper.
+        Example: `c="dark.8"`.
+    emptyState : str | dict, optional
+        Description: Content shown when there are no rows to display.
+        Example: `emptyState=dmc.Text("No matching employees")`.
+    customLoader : Any, optional
+        Description: Custom loader shown while `fetching=True`.
+        Example: `customLoader=dmc.Loader(color="blue")`.
+    noRecordsIcon : Any, optional
+        Description: Icon or component shown beside the empty-state text.
+        Example: `noRecordsIcon=dmc.ThemeIcon("!")`.
+    storeColumnsKey : str, optional
+        Description: Local-storage key used to persist draggable, toggleable,
+        or resizable column state in the browser.
+        Example: `storeColumnsKey="employees-columns-v1"`.
+    **kwargs : Any
+        Description: Additional Dash/Mantine props supported by the frontend,
+        including styling hooks such as `style`, `styles`, `className`,
+        `classNames`, and `tableProps`.
+        Example: `tableProps={"highlightOnHover": True}`.
 
     Attributes
     ----------
@@ -510,6 +803,11 @@ class DataTable(_GeneratedDataTable):
 
     Notes
     -----
+    Python-friendly aliases are accepted for a few common props, including
+    `records -> data`, `group_by -> groupBy`, `group_aggregations ->
+    groupAggregations`, `child_rows_accessor -> childRowsAccessor`, and
+    `dir -> direction`.
+
     Mapping-style properties such as `style`, `styles`, `classNames`,
     `tableProps`, and `scrollAreaProps` are merged when updated through the
     fluent helpers instead of being blindly replaced.
@@ -517,10 +815,20 @@ class DataTable(_GeneratedDataTable):
     Examples
     --------
     >>> table = DataTable(
-    ...     data=[{"id": 1, "name": "Avery", "team": "Platform"}],
-    ...     columns=[{"accessor": "name"}, {"accessor": "team"}],
+    ...     id="employees",
+    ...     data=[{"id": 1, "name": "Avery", "team": "Platform", "salary": 128000}],
+    ...     columns=[
+    ...         Column("name", title="Employee", sortable=True),
+    ...         Column("team", sortable=True),
+    ...         Column("salary", presentation="currency", currency="USD", textAlign="right"),
+    ...     ],
+    ...     idAccessor="id",
+    ...     paginationMode="client",
+    ...     radius="lg",
     ... )
     >>> table.update_columns(selector="name", title="Employee")
+    DataTable(...)
+    >>> table.update_selection(selectionTrigger="checkbox")
     DataTable(...)
     >>> table.update_rows(selector={"team": "Platform"}, className="team-platform")
     DataTable(...)
@@ -540,22 +848,34 @@ class DataTable(_GeneratedDataTable):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Initialize a `DataTable` and normalize Python-side property aliases.
+        Description
+        -----------
+        Initialize a `DataTable` and normalize the small set of Python-side
+        aliases accepted by this wrapper.
 
         Parameters
         ----------
-        *args
-            Positional arguments forwarded to the generated Dash component.
-        **kwargs
-            Component properties. Common aliases include `records`,
-            `group_by`, `group_aggregations`, `child_rows_accessor`, and
-            `dir`.
+        *args : Any
+            Description: Positional arguments forwarded to the generated Dash
+            component. Most users will not need positional arguments.
+            Example: `DataTable([...])` is uncommon; keyword arguments are
+            preferred.
+        **kwargs : Any
+            Description: Component properties accepted by `DataTable`. Common
+            aliases include `records`, `group_by`, `group_aggregations`,
+            `child_rows_accessor`, and `dir`.
+            Example: `DataTable(records=data, group_by="team", dir="rtl")`.
 
         Notes
         -----
-        Alias normalization happens before the generated component
-        constructor runs, so the stored properties always use the canonical
-        Dash names.
+        Alias normalization happens before the generated component constructor
+        runs, so the stored properties always use the canonical Dash names
+        such as `data`, `groupBy`, and `direction`.
+
+        Examples
+        --------
+        >>> DataTable(records=[{"id": 1, "name": "Avery"}], columns=[Column("name")])
+        DataTable(...)
         """
         normalized = _normalize_kwargs(kwargs)
         super().__init__(*args, **normalized)
@@ -591,65 +911,58 @@ class DataTable(_GeneratedDataTable):
 
     def update_layout(self, **kwargs: Any) -> "DataTable":
         """
-        Update high-level layout and presentation properties.
+        Description
+        -----------
+        Update high-level layout and presentation properties in place. Use
+        this when you want to tweak the table shell, sizing, color, spacing,
+        or loading presentation after the table has already been created.
 
         Parameters
         ----------
-        **kwargs
-            Layout-oriented component properties such as `style`,
-            `className`, `direction`, `tableProps`, spacing, sizing, or
-            Mantine style props.
-
-            Commonly used keyword arguments include:
-
-            - `radius`
-            - `withTableBorder`
-            - `withColumnBorders`
-            - `striped`
-            - `direction`
-            - `height`
-            - `minHeight`
-            - `maxHeight`
-            - `bg`
-            - `textSelectionDisabled`
-            - `pinFirstColumn`
-            - `pinLastColumn`
-            - `loadingText`
-            - `loaderType`
-            - `loaderColor`
-
-        Returns
-        -------
-        DataTable
-            The current instance.
-        """
-        return self._update_props(**kwargs)
-
-    def update_table_properties(self, **kwargs: Any) -> "DataTable":
-        """
-        Update table behavior and styling properties.
-
-        Parameters
-        ----------
-        **kwargs
-            Table properties such as borders, spacing, striped rows,
-            hover highlighting, pagination appearance, or default column
-            settings.
-
-            Commonly used keyword arguments include:
-
-            - `withRowBorders`
-            - `withTableBorder`
-            - `withColumnBorders`
-            - `horizontalSpacing`
-            - `verticalSpacing`
-            - `verticalAlign`
-            - `striped`
-            - `highlightOnHover`
-            - `stickyHeader`
-            - `stickyHeaderOffset`
-            - `defaultColumnProps`
-            - `paginationSize`
+        radius : str | int | float, optional
+            Description: Border radius for the table container.
+            Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`,
+            `'md'`, `'lg'`, `'xl'`, or a numeric/CSS value.
+            Example: `radius="lg"`.
+        direction : str, optional
+            Description: Layout direction.
+            Expected inputs: `'ltr'`, `'rtl'`.
+            Example: `direction="rtl"`.
+        height : str | int | float, optional
+            Description: Fixed table height.
+            Example: `height=420`.
+        minHeight : str | int | float, optional
+            Description: Minimum height for the table shell.
+            Example: `minHeight=240`.
+        maxHeight : str | int | float, optional
+            Description: Maximum height before scroll behavior appears.
+            Example: `maxHeight=560`.
+        bg : str | dict, optional
+            Description: Mantine background color prop.
+            Example: `bg="gray.0"`.
+        withTableBorder : bool, optional
+            Description: Toggles the outer border.
+            Example: `withTableBorder=True`.
+        withColumnBorders : bool, optional
+            Description: Toggles borders between columns.
+            Example: `withColumnBorders=False`.
+        striped : bool, optional
+            Description: Alternates row backgrounds.
+            Example: `striped=True`.
+        loadingText : str, optional
+            Description: Message shown while the table is fetching data.
+            Example: `loadingText="Loading employees..."`.
+        loaderType : str, optional
+            Description: Loader variant forwarded to the Mantine loader.
+            Example: `loaderType="dots"`.
+        loaderColor : str, optional
+            Description: Loader color token.
+            Example: `loaderColor="blue"`.
+        **kwargs : Any
+            Description: Additional layout or style props such as `style`,
+            `className`, `tableProps`, `pinFirstColumn`, or
+            `textSelectionDisabled`.
+            Example: `style={"boxShadow": "var(--mantine-shadow-sm)"}`.
 
         Returns
         -------
@@ -658,8 +971,91 @@ class DataTable(_GeneratedDataTable):
 
         Notes
         -----
-        This is an alias of :meth:`update_layout`, kept for readability in
-        fluent chains.
+        Mapping props like `style`, `styles`, `classNames`, `tableProps`, and
+        `scrollAreaProps` are merged with existing values instead of being
+        replaced wholesale.
+
+        Examples
+        --------
+        >>> table.update_layout(radius="lg", withTableBorder=True, striped=True)
+        DataTable(...)
+        """
+        return self._update_props(**kwargs)
+
+    def update_table_properties(self, **kwargs: Any) -> "DataTable":
+        """
+        Description
+        -----------
+        Update table behavior and styling properties using a more
+        table-focused method name. This is useful when you want fluent chains
+        to read like "layout", "columns", "rows", "selection", and so on.
+
+        Parameters
+        ----------
+        withRowBorders : bool, optional
+            Description: Toggles borders between body rows.
+            Example: `withRowBorders=True`.
+        withTableBorder : bool, optional
+            Description: Toggles the outer border.
+            Example: `withTableBorder=True`.
+        withColumnBorders : bool, optional
+            Description: Toggles borders between columns.
+            Example: `withColumnBorders=False`.
+        horizontalSpacing : str | int | float, optional
+            Description: Horizontal cell padding.
+            Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`,
+            `'md'`, `'lg'`, `'xl'`, or numeric values.
+            Example: `horizontalSpacing="sm"`.
+        verticalSpacing : str | int | float, optional
+            Description: Vertical cell padding.
+            Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`,
+            `'md'`, `'lg'`, `'xl'`, or numeric values.
+            Example: `verticalSpacing="xs"`.
+        verticalAlign : str, optional
+            Description: Vertical alignment for cell content.
+            Expected inputs: `'top'`, `'center'`, `'bottom'`.
+            Example: `verticalAlign="center"`.
+        striped : bool, optional
+            Description: Alternates row backgrounds.
+            Example: `striped=True`.
+        highlightOnHover : bool, optional
+            Description: Highlights the current row on hover.
+            Example: `highlightOnHover=True`.
+        stickyHeader : bool, optional
+            Description: Keeps the header visible when the table scrolls.
+            Example: `stickyHeader=True`.
+        stickyHeaderOffset : str | int | float, optional
+            Description: Offset used when sticky headers need to clear a fixed
+            app header.
+            Example: `stickyHeaderOffset=56`.
+        defaultColumnProps : dict, optional
+            Description: Shared defaults applied to every column unless a
+            column overrides them.
+            Example: `defaultColumnProps={"sortable": True}`.
+        paginationSize : str | int | float, optional
+            Description: Visual size of pagination controls.
+            Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`,
+            `'md'`, `'lg'`, `'xl'`, or a numeric size when supported.
+            Example: `paginationSize="sm"`.
+        **kwargs : Any
+            Description: Additional table-level props supported by the
+            component.
+            Example: `tableProps={"striped": True}`.
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        This is functionally an alias of `update_layout()`. The separate name
+        exists for readability in fluent chains.
+
+        Examples
+        --------
+        >>> table.update_table_properties(stickyHeader=True, verticalSpacing="xs")
+        DataTable(...)
         """
         return self._update_props(**kwargs)
 
@@ -671,42 +1067,67 @@ class DataTable(_GeneratedDataTable):
         **kwargs: Any,
     ) -> "DataTable":
         """
-        Add, replace, or merge column definitions.
+        Description
+        -----------
+        Add new columns or update existing ones. This is the main helper for
+        progressively shaping a table after the base `columns=[...]` list has
+        been created.
 
         Parameters
         ----------
-        *columns
-            Column definitions to add or update. Each item may be an accessor
-            string or a column dictionary.
+        *columns : Any
+            Description: Column definitions to add or update. Each item may be
+            an accessor string like `"salary"` or a full column dictionary.
+            Example: `table.update_columns(Column("salary", sortable=True))`.
         selector : Any, optional
-            Column accessor, or collection of accessors, identifying which
-            existing columns should be updated. When omitted, incoming column
-            definitions target their own `accessor` values.
-        overwrite : bool, default False
-            If `True`, replace matching columns instead of merging into the
-            existing definitions.
-        **kwargs
-            Column properties to merge into the selected columns.
-
-            Commonly used keyword arguments include:
-
-            - `title`
-            - `width`
-            - `presentation`
-            - `textAlign`
-            - `sortable`
-            - `ellipsis`
-            - `cellsStyle`
-            - `titleStyle`
-            - `render`
-            - `editable`
-            - `editor`
-            - `filter`
-            - `filtering`
-            - `draggable`
-            - `toggleable`
-            - `resizable`
-            - `defaultToggle`
+            Description: Accessor or collection of accessors identifying which
+            existing columns should be updated.
+            Example: `selector="salary"`.
+        overwrite : bool, optional
+            Description: Replaces matching columns instead of merging into the
+            existing definition when `True`.
+            Example: `overwrite=True`.
+        title : str, optional
+            Description: Replacement header label for the targeted columns.
+            Example: `title="Annual Salary"`.
+        presentation : str, optional
+            Description: Built-in display mode for the targeted columns.
+            Expected inputs: `'text'`, `'number'`, `'currency'`, `'date'`,
+            `'datetime'`, `'badge'`, `'link'`, `'code'`, `'json'`, `'progress'`.
+            Example: `presentation="currency"`.
+        sortable : bool, optional
+            Description: Enables sorting on the targeted columns.
+            Example: `sortable=True`.
+        textAlign : str, optional
+            Description: Horizontal content alignment.
+            Expected inputs: values accepted by Mantine/DataTable such as
+            `'left'`, `'center'`, `'right'`.
+            Example: `textAlign="right"`.
+        width : str | int | float, optional
+            Description: Column width.
+            Example: `width=140`.
+        editable : bool, optional
+            Description: Enables double-click editing for the targeted columns.
+            Example: `editable=True`.
+        editor : Any, optional
+            Description: In-place Dash editor component for editable columns.
+            Example: `editor=dmc.NumberInput(min=0)`.
+        render : Any, optional
+            Description: Custom Dash content for cell rendering.
+            Example: `render=dmc.Badge("Open")`.
+        filter : Any, optional
+            Description: Filter control rendered in the column's filter UI.
+            Example: `filter=dmc.TextInput(placeholder="Search")`.
+        cellsStyle : dict, optional
+            Description: Cell-level inline style mapping.
+            Example: `cellsStyle={"fontVariantNumeric": "tabular-nums"}`.
+        titleStyle : dict, optional
+            Description: Header-cell inline style mapping.
+            Example: `titleStyle={"textTransform": "uppercase"}`.
+        **kwargs : Any
+            Description: Additional column keys such as `ellipsis`,
+            `draggable`, `toggleable`, `resizable`, or `defaultToggle`.
+            Example: `resizable=True`.
 
         Returns
         -------
@@ -716,7 +1137,8 @@ class DataTable(_GeneratedDataTable):
         Notes
         -----
         Nested mapping properties such as `style`, `titleStyle`, and
-        `cellsStyle` are merged recursively for matching columns.
+        `cellsStyle` are merged recursively for matching columns. If no match
+        is found and the update includes an `accessor`, the column is appended.
 
         Examples
         --------
@@ -774,31 +1196,55 @@ class DataTable(_GeneratedDataTable):
         **kwargs: Any,
     ) -> "DataTable":
         """
-        Create or update grouped column headers.
+        Description
+        -----------
+        Create or update grouped column headers. Use this when you want header
+        rows that organize columns into sections like "Profile",
+        "Compensation", or "Quarterly Metrics".
 
         Parameters
         ----------
-        *groups
-            Group definitions to append or apply to existing groups.
+        *groups : dict[str, Any]
+            Description: Group definitions to append or apply to existing
+            groups.
+            Example: `table.group_columns(ColumnGroup("profile", columns=["name", "team"]))`.
         selector : Any, optional
-            Group id, or collection of ids, used to target existing groups.
-        **kwargs
-            Group properties to merge into the selected groups. `columns` and
-            nested `groups` are resolved against the current column
-            definitions when possible.
-
-            Commonly used keyword arguments include:
-
-            - `title`
-            - `columns`
-            - `groups`
-            - `style`
-            - `textAlign`
+            Description: Group id or collection of ids used to target existing
+            groups for updates.
+            Example: `selector="profile"`.
+        title : str, optional
+            Description: Visible label for the targeted group.
+            Example: `title="Profile"`.
+        columns : list[Any], optional
+            Description: Column references or column dictionaries attached to
+            the targeted group.
+            Example: `columns=["name", "team"]`.
+        groups : list[dict[str, Any]], optional
+            Description: Nested child groups for multi-row grouped headers.
+            Example: `groups=[ColumnGroup("cash", columns=["salary", "bonus"])]`.
+        style : dict, optional
+            Description: Inline style mapping for the group header.
+            Example: `style={"textAlign": "center"}`.
+        textAlign : str, optional
+            Description: Alignment hint for header content.
+            Expected inputs: values accepted by Mantine/DataTable such as
+            `'left'`, `'center'`, `'right'`.
+            Example: `textAlign="center"`.
+        **kwargs : Any
+            Description: Additional group-header properties supported by the
+            component.
+            Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
 
         Returns
         -------
         DataTable
             The current instance.
+
+        Notes
+        -----
+        When `columns` or nested `groups` are provided, this helper resolves
+        accessor strings against the current column definitions so grouped
+        headers stay in sync with the table's columns.
 
         Examples
         --------
@@ -842,37 +1288,68 @@ class DataTable(_GeneratedDataTable):
 
     def update_rows(self, selector: Any = None, **kwargs: Any) -> "DataTable":
         """
-        Update row-level styling, metadata, selection helpers, or expansion.
+        Description
+        -----------
+        Update row-level styling, metadata, expansion, or drag behavior. This
+        is the main helper for conditional row rules such as "highlight all
+        overdue rows" or "make platform rows clickable".
 
         Parameters
         ----------
         selector : Any, optional
-            Row selector used for conditional rules. This is typically a
-            mapping of record fields to match, but any Dash-safe selector
-            payload supported by the front end may be used.
-        **kwargs
-            Row-related properties to update.
-
-            Common aliases include:
-
-            - `color` -> `rowColor`
-            - `backgroundColor` -> `rowBackgroundColor`
-            - `className` -> `rowClassName`
-            - `style` -> `rowStyle`
-            - `attributes` -> `rowAttributes`
-            - `draggable` -> `rowDragging`
-
-            Commonly used keyword arguments include:
-
-            - `rowColor` or `color`
-            - `rowBackgroundColor` or `backgroundColor`
-            - `rowClassName` or `className`
-            - `rowStyle` or `style`
-            - `rowAttributes` or `attributes`
-            - `rowDragging` or `draggable`
-            - `idAccessor`
-            - `expandedRecordIds`
-            - `rowExpansion`
+            Description: Selector used for conditional rules. In practice this
+            is usually a mapping of row fields to match.
+            Example: `selector={"status": "Needs Review"}`.
+        rowColor : str | dict | list, optional
+            Description: Row text color or row-color rule.
+            Example: `rowColor="red.8"`.
+        color : str | dict | list, optional
+            Description: Alias for `rowColor`.
+            Example: `color="blue.8"`.
+        rowBackgroundColor : str | dict | list, optional
+            Description: Row background color or conditional background rule.
+            Example: `rowBackgroundColor="yellow.0"`.
+        backgroundColor : str | dict | list, optional
+            Description: Alias for `rowBackgroundColor`.
+            Example: `backgroundColor="green.0"`.
+        rowClassName : str | dict | list, optional
+            Description: CSS class name or conditional class rule for rows.
+            Example: `rowClassName="row-warning"`.
+        className : str | dict | list, optional
+            Description: Alias for `rowClassName`.
+            Example: `className="row-clickable"`.
+        rowStyle : dict | list, optional
+            Description: Inline style mapping or conditional row-style rule.
+            Example: `rowStyle={"cursor": "pointer"}`.
+        style : dict | list, optional
+            Description: Alias for `rowStyle`.
+            Example: `style={"fontWeight": 600}`.
+        rowAttributes : dict | list, optional
+            Description: Extra DOM attributes or conditional attribute rules.
+            Example: `rowAttributes={"data-kind": "employee"}`.
+        attributes : dict | list, optional
+            Description: Alias for `rowAttributes`.
+            Example: `attributes={"data-team": "platform"}`.
+        rowDragging : bool | dict, optional
+            Description: Enables table-level drag-and-drop row reordering.
+            Example: `rowDragging=True`.
+        draggable : bool | dict, optional
+            Description: Alias for `rowDragging`.
+            Example: `draggable=True`.
+        idAccessor : str | dict | list[str], optional
+            Description: Record identifier accessor used by selection and
+            expansion.
+            Example: `idAccessor="employeeId"`.
+        expandedRecordIds : list[Any], optional
+            Description: Controlled list of expanded row ids.
+            Example: `expandedRecordIds=[1, 2]`.
+        rowExpansion : dict, optional
+            Description: Row-expansion configuration.
+            Example: `rowExpansion=RowExpansionConfig(content="Details")`.
+        **kwargs : Any
+            Description: Additional row-related props supported by the
+            component.
+            Example: `rowBorderColor="gray.3"`.
 
         Returns
         -------
@@ -891,6 +1368,13 @@ class DataTable(_GeneratedDataTable):
         Conditional row props are stored as Dash-safe rule objects of the form
         `{"selector": ..., "value": ...}`. Unconditional updates overwrite
         static row props unless the property supports rule accumulation.
+
+        Examples
+        --------
+        >>> table.update_rows(selector={"status": "Needs Review"}, backgroundColor="orange.0")
+        DataTable(...)
+        >>> table.update_rows(style={"cursor": "pointer"})
+        DataTable(...)
         """
         for alias, canonical in _ROW_PROP_ALIASES.items():
             if alias in kwargs and canonical in kwargs:
@@ -941,18 +1425,42 @@ class DataTable(_GeneratedDataTable):
         cellSelector: Any = None,
     ) -> "DataTable":
         """
-        Enable common row or cell interaction affordances.
+        Description
+        -----------
+        Apply the visual cues that make a table feel interactive. This helper
+        sets pointer cursors, enables hover highlighting when appropriate, and
+        disables text selection so click targets feel intentional.
 
         Parameters
         ----------
-        rowClick, rowDoubleClick, rowContextMenu : bool, default False
-            When enabled, turn on pointer-cursor row styling and disable text
-            selection so rows feel interactive.
-        cellClick, cellDoubleClick, cellContextMenu : bool, default False
-            When enabled, apply pointer-cursor styling to cells.
+        rowClick : bool, optional
+            Description: Applies interactive row styling for single-click row
+            handlers.
+            Example: `rowClick=True`.
+        rowDoubleClick : bool, optional
+            Description: Applies interactive row styling for double-click row
+            handlers.
+            Example: `rowDoubleClick=True`.
+        rowContextMenu : bool, optional
+            Description: Applies interactive row styling for context-menu row
+            handlers.
+            Example: `rowContextMenu=True`.
+        cellClick : bool, optional
+            Description: Applies interactive styling to cells for click
+            handlers.
+            Example: `cellClick=True`.
+        cellDoubleClick : bool, optional
+            Description: Applies interactive styling to cells for double-click
+            handlers.
+            Example: `cellDoubleClick=True`.
+        cellContextMenu : bool, optional
+            Description: Applies interactive styling to cells for context-menu
+            handlers.
+            Example: `cellContextMenu=True`.
         cellSelector : Any, optional
-            Column selector limiting which cells receive interactive cursor
-            styling. When omitted, all current columns are targeted.
+            Description: Accessor or collection of accessors limiting which
+            columns receive interactive cell styling.
+            Example: `cellSelector=["name", "status"]`.
 
         Returns
         -------
@@ -962,7 +1470,13 @@ class DataTable(_GeneratedDataTable):
         Notes
         -----
         This helper configures presentation only. It does not register Dash
-        callbacks by itself.
+        callbacks by itself; you still need Dash callbacks that listen to the
+        event payload props such as `rowClick` or `cellClick`.
+
+        Examples
+        --------
+        >>> table.add_interactivity(rowClick=True, cellClick=True, cellSelector=["name"])
+        DataTable(...)
         """
         if rowClick or rowDoubleClick or rowContextMenu:
             if getattr(self, "highlightOnHover", None) is None:
@@ -982,121 +1496,241 @@ class DataTable(_GeneratedDataTable):
 
     def update_selection(self, **kwargs: Any) -> "DataTable":
         """
-        Update selection-related properties.
+        Description
+        -----------
+        Update selection-related properties in place.
 
         Parameters
         ----------
-        **kwargs
-            Selection properties such as `selectedRecordIds`,
-            `selectedRecords`, `selectionTrigger`, or selection rule props.
-
-            Commonly used keyword arguments include:
-
-            - `selectionTrigger`
-            - `selectedRecordIds`
-            - `selectedRecords`
-            - `selectableRowRules`
-            - `disabledSelectionRowRules`
-            - `selectionCheckboxRules`
-            - `selectionCheckboxProps`
-            - `allRecordsSelectionCheckboxProps`
-            - `selectionColumnClassName`
-            - `selectionColumnStyle`
+        selectionTrigger : str, optional
+            Description: Enables selection and decides how it is triggered.
+            Expected inputs: `'cell'`, `'checkbox'`.
+            Example: `selectionTrigger="checkbox"`.
+        selectedRecordIds : list[Any], optional
+            Description: Controlled ids for selected rows.
+            Example: `selectedRecordIds=[1, 3]`.
+        selectedRecords : list[dict], optional
+            Description: Controlled record payloads for selected rows.
+            Example: `selectedRecords=[{"id": 1, "name": "Avery"}]`.
+        selectableRowRules : bool | dict | list, optional
+            Description: Conditional rules that mark rows as selectable.
+            Example: `selectableRowRules=[{"selector": {"active": True}, "value": True}]`.
+        disabledSelectionRowRules : bool | dict | list, optional
+            Description: Conditional rules that disable selection for matching
+            rows.
+            Example: `disabledSelectionRowRules=[{"selector": {"locked": True}, "value": True}]`.
+        selectionCheckboxRules : dict | list, optional
+            Description: Conditional props for row-selection checkboxes.
+            Example: `selectionCheckboxRules=[{"selector": {"locked": True}, "value": {"disabled": True}}]`.
+        selectionCheckboxProps : dict, optional
+            Description: Shared props for row-selection checkboxes.
+            Example: `selectionCheckboxProps={"size": "sm"}`.
+        allRecordsSelectionCheckboxProps : dict, optional
+            Description: Props for the header "select all" checkbox.
+            Example: `allRecordsSelectionCheckboxProps={"aria-label": "Select all employees"}`.
+        selectionColumnClassName : str, optional
+            Description: CSS class for the selection column.
+            Example: `selectionColumnClassName="table-selection-col"`.
+        selectionColumnStyle : dict, optional
+            Description: Inline styles for the selection column.
+            Example: `selectionColumnStyle={"width": 44}`.
+        **kwargs : Any
+            Description: Additional selection props supported by the
+            component.
+            Example: `keepSelectionOnPageChange=True`.
 
         Returns
         -------
         DataTable
             The current instance.
+
+        Notes
+        -----
+        This is a convenience wrapper around the component props; it does not
+        add extra selection logic beyond alias normalization and in-place
+        updates.
+
+        Examples
+        --------
+        >>> table.update_selection(selectionTrigger="checkbox", selectedRecordIds=[1])
+        DataTable(...)
         """
         return self._update_props(**kwargs)
 
     def update_pagination(self, **kwargs: Any) -> "DataTable":
         """
-        Update pagination-related properties.
+        Description
+        -----------
+        Update pagination-related properties in place.
 
         Parameters
         ----------
-        **kwargs
-            Pagination properties such as `page`, `pageSize`,
-            `recordsPerPage`, `totalRecords`, or pagination display options.
-
-            Commonly used keyword arguments include:
-
-            - `page`
-            - `pageSize`
-            - `recordsPerPage`
-            - `totalRecords`
-            - `recordsPerPageOptions`
-            - `pageSizeOptions`
-            - `recordsPerPageLabel`
-            - `paginationSize`
-            - `paginationActiveTextColor`
-            - `paginationActiveBackgroundColor`
-            - `paginationWithEdges`
-            - `paginationWithControls`
+        page : int | float, optional
+            Description: Current page number.
+            Example: `page=2`.
+        pageSize : int | float, optional
+            Description: Number of rows shown per page when using `pageSize`.
+            Example: `pageSize=25`.
+        recordsPerPage : int | float, optional
+            Description: Number of rows shown per page when using
+            `recordsPerPage`.
+            Example: `recordsPerPage=25`.
+        totalRecords : int | float, optional
+            Description: Total number of available records.
+            Example: `totalRecords=240`.
+        recordsPerPageOptions : list[int | float], optional
+            Description: Footer choices for rows per page.
+            Example: `recordsPerPageOptions=[10, 25, 50, 100]`.
+        pageSizeOptions : list[int | float], optional
+            Description: Alternative prop for page-size choices.
+            Example: `pageSizeOptions=[10, 25, 50]`.
+        recordsPerPageLabel : str, optional
+            Description: Label for the page-size control.
+            Example: `recordsPerPageLabel="Rows"`.
+        paginationSize : str | int | float, optional
+            Description: Visual size of the pagination controls.
+            Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`,
+            `'md'`, `'lg'`, `'xl'`, or a numeric size when supported.
+            Example: `paginationSize="sm"`.
+        paginationActiveTextColor : str | dict, optional
+            Description: Text color for the active page button.
+            Example: `paginationActiveTextColor="white"`.
+        paginationActiveBackgroundColor : str | dict, optional
+            Description: Background color for the active page button.
+            Example: `paginationActiveBackgroundColor="blue.6"`.
+        paginationWithEdges : bool, optional
+            Description: Shows first/last page controls.
+            Example: `paginationWithEdges=True`.
+        paginationWithControls : bool, optional
+            Description: Shows previous/next page controls.
+            Example: `paginationWithControls=True`.
+        **kwargs : Any
+            Description: Additional pagination props supported by the
+            component.
+            Example: `paginationText="Rows per page"`.
 
         Returns
         -------
         DataTable
             The current instance.
+
+        Notes
+        -----
+        This helper is useful for both initial setup and controlled callback
+        updates when the current page, size, or total count changes.
+
+        Examples
+        --------
+        >>> table.update_pagination(page=2, totalRecords=240, recordsPerPage=25)
+        DataTable(...)
         """
         return self._update_props(**kwargs)
 
     def update_sorting(self, **kwargs: Any) -> "DataTable":
         """
-        Update sorting-related properties.
+        Description
+        -----------
+        Update sorting-related properties in place.
 
         Parameters
         ----------
-        **kwargs
-            Sorting properties such as `sortStatus`, `sortMode`, or
-            `sortIcons`.
-
-            Commonly used keyword arguments include:
-
-            - `sortStatus`
-            - `sortMode`
-            - `sortIcons`
+        sortStatus : dict, optional
+            Description: Controlled sort descriptor, usually containing the
+            active accessor and direction.
+            Example: `sortStatus={"columnAccessor": "salary", "direction": "desc"}`.
+        sortMode : str, optional
+            Description: Chooses where sorting is handled.
+            Expected inputs: `'client'`, `'server'`.
+            Example: `sortMode="server"`.
+        sortIcons : dict, optional
+            Description: Custom icons or components for sorted/unsorted states.
+            Example: `sortIcons={"sorted": dmc.Text("v"), "unsorted": dmc.Text("-")}`.
+        **kwargs : Any
+            Description: Additional sorting props supported by the component.
+            Example: `multiSort=True`.
 
         Returns
         -------
         DataTable
             The current instance.
+
+        Notes
+        -----
+        In server mode, this helper typically pairs with a Dash callback that
+        reacts to `sortStatus` or `lastSortChange` and returns freshly sorted
+        data.
+
+        Examples
+        --------
+        >>> table.update_sorting(sortMode="server", sortStatus={"columnAccessor": "name", "direction": "asc"})
+        DataTable(...)
         """
         return self._update_props(**kwargs)
 
     def update_search(self, **kwargs: Any) -> "DataTable":
         """
-        Update search-related properties.
+        Description
+        -----------
+        Update search-related properties in place.
 
         Parameters
         ----------
-        **kwargs
-            Search properties such as `searchQuery`, `searchMode`, or
-            `searchableAccessors`.
-
-            Commonly used keyword arguments include:
-
-            - `searchQuery`
-            - `searchMode`
-            - `searchableAccessors`
+        searchQuery : str, optional
+            Description: Controlled search text.
+            Example: `searchQuery="platform"`.
+        searchMode : str, optional
+            Description: Chooses where search filtering is handled.
+            Expected inputs: `'client'`, `'server'`.
+            Example: `searchMode="client"`.
+        searchableAccessors : list[str], optional
+            Description: Limits client-side search to specific record fields.
+            Example: `searchableAccessors=["name", "team", "role"]`.
+        **kwargs : Any
+            Description: Additional search props supported by the component.
+            Example: `debounce=150`.
 
         Returns
         -------
         DataTable
             The current instance.
+
+        Notes
+        -----
+        In server mode, this helper usually pairs with a Dash callback that
+        fetches filtered rows from your backend.
+
+        Examples
+        --------
+        >>> table.update_search(searchMode="client", searchQuery="platform")
+        DataTable(...)
         """
         return self._update_props(**kwargs)
 
     def clear_selection(self) -> "DataTable":
         """
-        Clear all selected rows.
+        Description
+        -----------
+        Clear all selected rows by resetting both selection payload props.
+
+        Parameters
+        ----------
+        None.
 
         Returns
         -------
         DataTable
             The current instance with `selectedRecordIds` and
             `selectedRecords` reset to empty lists.
+
+        Notes
+        -----
+        This is useful in callbacks after bulk actions, page changes, or
+        filter changes when you want selection state to be explicitly cleared.
+
+        Examples
+        --------
+        >>> table.clear_selection()
+        DataTable(...)
         """
         self.selectedRecordIds = []
         self.selectedRecords = []
@@ -1104,13 +1738,29 @@ class DataTable(_GeneratedDataTable):
 
     def clear_expansion(self) -> "DataTable":
         """
-        Collapse all expanded rows.
+        Description
+        -----------
+        Collapse all expanded rows by resetting `expandedRecordIds`.
+
+        Parameters
+        ----------
+        None.
 
         Returns
         -------
         DataTable
             The current instance with `expandedRecordIds` reset to an empty
             list.
+
+        Notes
+        -----
+        This is helpful after replacing the underlying dataset or when you
+        want grouped/expanded state to restart from a clean slate.
+
+        Examples
+        --------
+        >>> table.clear_expansion()
+        DataTable(...)
         """
         self.expandedRecordIds = []
         return self

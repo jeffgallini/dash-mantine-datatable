@@ -113,6 +113,22 @@ table = (
 )
 ```
 
+## API Docs
+
+Build the package API docs locally with `pdoc`:
+
+```bash
+python -m pip install -e ".[docs]"
+python scripts/build_docs.py
+```
+
+This generates a static site in `site/`. The repository also includes
+`.github/workflows/docs.yml`, which rebuilds the same docs and deploys them to
+GitHub Pages whenever `main` changes.
+
+To enable deployment on GitHub, open `Settings -> Pages` and set the publishing
+source to `GitHub Actions`.
+
 ## Local Development
 
 ```bash
