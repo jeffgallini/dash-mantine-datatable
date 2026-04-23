@@ -136,11 +136,33 @@ python usage.py
 
 ```powershell
 .\scripts\check-release.ps1
-python -m twine upload --repository testpypi dist/*
 ```
 
-Smoke-test the TestPyPI release in a fresh virtual environment before uploading
-the same artifact set to PyPI. The release check rebuilds the JavaScript bundle,
-runs the test suite, builds the sdist and wheel, and verifies that the release
-artifacts include the bundled JS assets, `metadata.json`, `package-info.json`,
-`README.md`, and `LICENSE`.
+```bash
+python scripts/check_release.py
+```
+
+Use `staging` as the integration branch for contributor PRs, then open a
+release PR from `staging` into `main` when you are ready to publish. Release
+PRs must be titled `vX.Y.Z Release` and may optionally include extra text after
+that prefix. Before opening the PR, update these files to the same version:
+
+- `package.json`
+- `package-lock.json`
+- `dash_mantine_datatable/package-info.json`
+- `Project.toml`
+- `CHANGELOG.md`
+
+The `CHANGELOG.md` entry for the release must start with a heading like
+`## X.Y.Z - YYYY-MM-DD`. On merge, `.github/workflows/publish-release.yml`
+re-runs the release checks, uploads the package to PyPI, and creates or updates
+a GitHub release tagged `vX.Y.Z` whose notes come from the matching changelog
+section.
+
+One-time GitHub setup:
+
+- Create a long-lived `staging` branch.
+- Protect `main` so changes land by pull request, not direct push.
+- Require the `Release PR Guard` workflow on `main`.
+- Add a `PYPI_API_TOKEN` secret to the `pypi` environment used by the publish
+  workflow.
