@@ -8,6 +8,7 @@ component-based templates.
 """
 
 import ast
+import inspect
 import json
 import os
 import re
@@ -1310,41 +1311,150 @@ API_REFERENCE_PARAMETER_COLUMNS = [
     ),
 ]
 
+
+def signature_parameters(callable_obj, *, strip_self=False):
+    """Return callable parameters, optionally dropping the leading `self`."""
+
+    parameters = list(inspect.signature(callable_obj).parameters.values())
+    if strip_self and parameters and parameters[0].name == "self":
+        parameters = parameters[1:]
+    return parameters
+
+
+def render_signature_parameter(parameter):
+    """Render one parameter without type annotations for a friendlier docs preview."""
+
+    prefix = ""
+    if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+        prefix = "*"
+    elif parameter.kind == inspect.Parameter.VAR_KEYWORD:
+        prefix = "**"
+
+    rendered = f"{prefix}{parameter.name}"
+    if (
+        parameter.default is not inspect.Signature.empty
+        and parameter.kind not in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}
+    ):
+        rendered += f"={parameter.default!r}"
+    return rendered
+
+
+def render_signature(parameters):
+    """Render a clean signature string without annotations."""
+
+    parts = []
+    has_varargs = False
+    positional_only_total = sum(
+        parameter.kind == inspect.Parameter.POSITIONAL_ONLY
+        for parameter in parameters
+    )
+    positional_only_seen = 0
+    inserted_kwonly_marker = False
+
+    for parameter in parameters:
+        if (
+            parameter.kind == inspect.Parameter.KEYWORD_ONLY
+            and not inserted_kwonly_marker
+            and not has_varargs
+        ):
+            parts.append("*")
+            inserted_kwonly_marker = True
+
+        parts.append(render_signature_parameter(parameter))
+
+        if parameter.kind == inspect.Parameter.POSITIONAL_ONLY:
+            positional_only_seen += 1
+            if positional_only_seen == positional_only_total:
+                parts.append("/")
+        elif parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+            has_varargs = True
+
+    return f"({', '.join(parts)})"
+
+
+def signature_preview(
+    callable_obj,
+    display_name,
+    *,
+    strip_self=False,
+    max_params=None,
+    tail=2,
+):
+    """Render a readable callable signature, truncating very long parameter lists."""
+
+    parameters = signature_parameters(callable_obj, strip_self=strip_self)
+
+    if max_params is None or len(parameters) <= max_params:
+        return f"{display_name}{render_signature(parameters)}"
+
+    head = max(1, max_params - tail - 1)
+    preview = [render_signature_parameter(parameter) for parameter in parameters[:head]]
+    preview.append("...")
+    preview.extend(
+        render_signature_parameter(parameter)
+        for parameter in parameters[-tail:]
+    )
+    return f"{display_name}({', '.join(preview)})"
+
 API_REFERENCE_ITEMS = [
     {
         "id": "api-datatable",
         "name": "DataTable",
         "kind": "component",
-        "signature": "dmdt.DataTable(*args, **kwargs)",
-        "description": (
-            "The main Dash component. Use it to render records, define columns, "
-            "control selection and pagination, and read callback payloads back "
-            "from the browser."
+        "signature": signature_preview(
+            dmdt.DataTable,
+            "dmdt.DataTable",
+            max_params=8,
+            tail=2,
         ),
-        "returns": "Returns a Dash component instance with chainable Python helpers.",
+        "description": (
+            "Primary Dash table component for rendering records, shaping "
+            "columns, and controlling table state from Python."
+        ),
+        "returns": "Returns a Dash component instance with fluent Python helpers.",
         "methods": [
             {
-                "name": "update_layout(**kwargs)",
-                "description": "Merge layout, sizing, direction, className, style, and other table-level presentation props.",
+                "name": signature_preview(
+                    dmdt.DataTable.update_layout,
+                    "update_layout",
+                    strip_self=True,
+                ),
+                "description": "Merge layout, sizing, direction, and other table-shell presentation props.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_table_properties(**kwargs)",
-                "description": "Readable alias for `update_layout()` when you are tuning borders, spacing, striped rows, or other table props.",
+                "name": signature_preview(
+                    dmdt.DataTable.update_table_properties,
+                    "update_table_properties",
+                    strip_self=True,
+                ),
+                "description": "Readable alias for `update_layout()` when you are tuning borders, spacing, striped rows, or other table properties.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_columns(*columns, selector=None, overwrite=False, **kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_columns,
+                    "update_columns",
+                    strip_self=True,
+                ),
                 "description": "Add new columns or merge updates into existing columns by accessor.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "group_columns(*groups, selector=None, **kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.group_columns,
+                    "group_columns",
+                    strip_self=True,
+                ),
                 "description": "Create or update grouped headers, including nested group trees.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_rows(selector=None, **kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_rows,
+                    "update_rows",
+                    strip_self=True,
+                ),
                 "description": "Apply row-level colors, styles, class names, attributes, dragging, IDs, or expansion state.",
                 "type": "method -> DataTable",
             },
@@ -1354,22 +1464,38 @@ API_REFERENCE_ITEMS = [
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_selection(**kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_selection,
+                    "update_selection",
+                    strip_self=True,
+                ),
                 "description": "Update controlled selection props and selection rule settings.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_pagination(**kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_pagination,
+                    "update_pagination",
+                    strip_self=True,
+                ),
                 "description": "Update page, page size, total records, and pagination appearance props.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_sorting(**kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_sorting,
+                    "update_sorting",
+                    strip_self=True,
+                ),
                 "description": "Update sort mode, sort status, or sort icon props.",
                 "type": "method -> DataTable",
             },
             {
-                "name": "update_search(**kwargs)",
+                "name": signature_preview(
+                    dmdt.DataTable.update_search,
+                    "update_search",
+                    strip_self=True,
+                ),
                 "description": "Update search mode, query text, and searchable accessor props.",
                 "type": "method -> DataTable",
             },
@@ -1548,10 +1674,10 @@ API_REFERENCE_ITEMS = [
         "id": "api-column",
         "name": "Column",
         "kind": "helper",
-        "signature": "dmdt.Column(accessor=None, /, **kwargs)",
+        "signature": signature_preview(dmdt.Column, "dmdt.Column"),
         "description": (
-            "Convenience builder for a column-definition dictionary. It keeps "
-            "demo code compact and makes default-column props easier to read."
+            "Convenience builder for column-definition dictionaries. It keeps "
+            "table declarations compact without hiding the underlying keys."
         ),
         "returns": "Returns a plain `dict` that can be used in `columns` or `defaultColumnProps`.",
         "keyword_arguments": [
@@ -1621,7 +1747,7 @@ API_REFERENCE_ITEMS = [
         "id": "api-column-group",
         "name": "ColumnGroup",
         "kind": "helper",
-        "signature": "dmdt.ColumnGroup(group_id=None, /, *, columns=None, groups=None, **kwargs)",
+        "signature": signature_preview(dmdt.ColumnGroup, "dmdt.ColumnGroup"),
         "description": (
             "Builder for grouped-header dictionaries. Use it for shared "
             "header labels and nested header trees."
@@ -1659,7 +1785,7 @@ API_REFERENCE_ITEMS = [
         "id": "api-selection-config",
         "name": "SelectionConfig",
         "kind": "helper",
-        "signature": "dmdt.SelectionConfig(**kwargs)",
+        "signature": signature_preview(dmdt.SelectionConfig, "dmdt.SelectionConfig"),
         "description": (
             "Compact builder for selection-related props. It removes `None` "
             "values so larger table declarations stay readable."
@@ -1712,7 +1838,7 @@ API_REFERENCE_ITEMS = [
         "id": "api-pagination-config",
         "name": "PaginationConfig",
         "kind": "helper",
-        "signature": "dmdt.PaginationConfig(**kwargs)",
+        "signature": signature_preview(dmdt.PaginationConfig, "dmdt.PaginationConfig"),
         "description": (
             "Compact builder for pagination-related props. It is especially "
             "useful when a table has several pagination styling and state props."
@@ -1765,7 +1891,7 @@ API_REFERENCE_ITEMS = [
         "id": "api-row-expansion-config",
         "name": "RowExpansionConfig",
         "kind": "helper",
-        "signature": "dmdt.RowExpansionConfig(content=None, /, **kwargs)",
+        "signature": signature_preview(dmdt.RowExpansionConfig, "dmdt.RowExpansionConfig"),
         "description": (
             "Builder for row-expansion dictionaries. Use it when expanded rows "
             "should render detail content, nested tables, or callback-driven child views."
@@ -1895,7 +2021,11 @@ DATA_TABLE_PROP_DESCRIPTION_OVERRIDES = {
 DATA_TABLE_METHOD_DETAILS = [
     {
         "name": "update_layout",
-        "signature": "update_layout(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_layout,
+            "update_layout",
+            strip_self=True,
+        ),
         "description": "Merge layout, sizing, direction, style, and other table-level presentation props into the current table instance.",
         "returns": "DataTable",
         "parameters": [
@@ -1958,22 +2088,21 @@ DATA_TABLE_METHOD_DETAILS = [
                 "description": "Common loading-overlay customization props used by the examples.",
                 "type": "str",
                 "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other layout-oriented props such as `style`, `className`, `tableProps`, `scrollAreaProps`, or Mantine style props.",
-                "type": "component props",
-                "default": "",
             }
         ],
         "notes": [
             "Mapping props such as `style`, `styles`, `classNames`, `tableProps`, and `scrollAreaProps` are merged recursively.",
             "Python aliases such as `dir` and `group_by` are normalized before the update is applied.",
+            "Any canonical constructor keyword from `DataTable.py` can still be passed when that keeps a fluent chain easier to read.",
         ],
     },
     {
         "name": "update_table_properties",
-        "signature": "update_table_properties(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_table_properties,
+            "update_table_properties",
+            strip_self=True,
+        ),
         "description": "Readable alias for `update_layout()` when you are adjusting table behavior, borders, spacing, striped rows, or default-column settings.",
         "returns": "DataTable",
         "parameters": [
@@ -2006,21 +2135,20 @@ DATA_TABLE_METHOD_DETAILS = [
                 "description": "Default props merged into every column definition.",
                 "type": "dict",
                 "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other table-level props that read more clearly when grouped under a table-properties call.",
-                "type": "component props",
-                "default": "",
             }
         ],
         "notes": [
             "This method exists for readability in fluent chains; behavior matches `update_layout()`.",
+            "Use it when the table shell reads more naturally as a dedicated step in a fluent chain.",
         ],
     },
     {
         "name": "update_columns",
-        "signature": "update_columns(*columns, selector=None, overwrite=False, **kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_columns,
+            "update_columns",
+            strip_self=True,
+        ),
         "description": "Add new columns or merge updates into existing columns by accessor.",
         "returns": "DataTable",
         "parameters": [
@@ -2084,21 +2212,20 @@ DATA_TABLE_METHOD_DETAILS = [
                 "type": "bool",
                 "default": "",
             },
-            {
-                "name": "**kwargs",
-                "description": "Any other column props accepted by the component.",
-                "type": "column props",
-                "default": "",
-            },
         ],
         "notes": [
             "Nested mapping props like `style`, `cellsStyle`, `titleStyle`, `headerStyle`, and `filterPopoverProps` are merged recursively.",
             "If no matching column exists and the update includes an accessor, the column is appended.",
+            "For the broader column key surface, `update_columns()` accepts the same fields documented by `Column(...)`.",
         ],
     },
     {
         "name": "group_columns",
-        "signature": "group_columns(*groups, selector=None, **kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.group_columns,
+            "group_columns",
+            strip_self=True,
+        ),
         "description": "Create or update grouped headers, including nested group trees.",
         "returns": "DataTable",
         "parameters": [
@@ -2132,21 +2259,20 @@ DATA_TABLE_METHOD_DETAILS = [
                 "type": "dict / str",
                 "default": "",
             },
-            {
-                "name": "**kwargs",
-                "description": "Any other grouped-header props accepted by the component.",
-                "type": "group props",
-                "default": "",
-            },
         ],
         "notes": [
             "Column accessors inside `columns` are resolved against the current column definitions.",
             "Nested `groups` trees are normalized before being stored on the component.",
+            "For the broader grouped-header key surface, `group_columns()` accepts the same fields documented by `ColumnGroup(...)`.",
         ],
     },
     {
         "name": "update_rows",
-        "signature": "update_rows(selector=None, **kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_rows,
+            "update_rows",
+            strip_self=True,
+        ),
         "description": "Apply row-level colors, styles, class names, attributes, dragging, IDs, or expansion state.",
         "returns": "DataTable",
         "parameters": [
@@ -2204,12 +2330,6 @@ DATA_TABLE_METHOD_DETAILS = [
                 "type": "list / dict",
                 "default": "",
             },
-            {
-                "name": "**kwargs",
-                "description": "Any other row props accepted by the component.",
-                "type": "row props",
-                "default": "",
-            },
         ],
         "notes": [
             "Supported aliases are `color`, `backgroundColor`, `className`, `style`, `attributes`, and `draggable`.",
@@ -2219,7 +2339,11 @@ DATA_TABLE_METHOD_DETAILS = [
     },
     {
         "name": "add_interactivity",
-        "signature": "add_interactivity(*, rowClick=False, rowDoubleClick=False, rowContextMenu=False, cellClick=False, cellDoubleClick=False, cellContextMenu=False, cellSelector=None)",
+        "signature": signature_preview(
+            dmdt.DataTable.add_interactivity,
+            "add_interactivity",
+            strip_self=True,
+        ),
         "description": "Enable row or cell pointer-cursor affordances for click, double-click, or context-menu patterns.",
         "returns": "DataTable",
         "parameters": [
@@ -2249,7 +2373,11 @@ DATA_TABLE_METHOD_DETAILS = [
     },
     {
         "name": "update_selection",
-        "signature": "update_selection(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_selection,
+            "update_selection",
+            strip_self=True,
+        ),
         "description": "Update controlled selection props and selection rule settings.",
         "returns": "DataTable",
         "parameters": [
@@ -2288,12 +2416,6 @@ DATA_TABLE_METHOD_DETAILS = [
                 "description": "Styling hooks for the selection column.",
                 "type": "str / dict",
                 "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other selection-related props accepted by the component.",
-                "type": "selection props",
-                "default": "",
             }
         ],
         "notes": [
@@ -2302,7 +2424,11 @@ DATA_TABLE_METHOD_DETAILS = [
     },
     {
         "name": "update_pagination",
-        "signature": "update_pagination(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_pagination,
+            "update_pagination",
+            strip_self=True,
+        ),
         "description": "Update page, page size, total records, and pagination appearance props.",
         "returns": "DataTable",
         "parameters": [
@@ -2347,12 +2473,6 @@ DATA_TABLE_METHOD_DETAILS = [
                 "description": "Toggles first/last and previous/next pagination controls.",
                 "type": "bool",
                 "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other pagination-related props accepted by the component.",
-                "type": "pagination props",
-                "default": "",
             }
         ],
         "notes": [
@@ -2361,7 +2481,11 @@ DATA_TABLE_METHOD_DETAILS = [
     },
     {
         "name": "update_sorting",
-        "signature": "update_sorting(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_sorting,
+            "update_sorting",
+            strip_self=True,
+        ),
         "description": "Update sort mode, sort status, or sort icon props.",
         "returns": "DataTable",
         "parameters": [
@@ -2382,12 +2506,6 @@ DATA_TABLE_METHOD_DETAILS = [
                 "description": "Custom sorted and unsorted icons for sortable headers.",
                 "type": "dict",
                 "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other sorting-related props accepted by the component.",
-                "type": "sorting props",
-                "default": "",
             }
         ],
         "notes": [
@@ -2396,7 +2514,11 @@ DATA_TABLE_METHOD_DETAILS = [
     },
     {
         "name": "update_search",
-        "signature": "update_search(**kwargs)",
+        "signature": signature_preview(
+            dmdt.DataTable.update_search,
+            "update_search",
+            strip_self=True,
+        ),
         "description": "Update search mode, query text, and searchable accessor props.",
         "returns": "DataTable",
         "parameters": [
@@ -2416,12 +2538,6 @@ DATA_TABLE_METHOD_DETAILS = [
                 "name": "searchableAccessors",
                 "description": "Limits client-side search to the listed columns.",
                 "type": "list[str]",
-                "default": "",
-            },
-            {
-                "name": "**kwargs",
-                "description": "Any other search-related props accepted by the component.",
-                "type": "search props",
                 "default": "",
             }
         ],
@@ -2681,13 +2797,17 @@ def build_datatable_api_item():
         "id": "api-datatable",
         "name": "DataTable",
         "kind": "component",
-        "signature": "dmdt.DataTable(*args, **kwargs)",
-        "description": (
-            "The main Dash component. Use it to render records, define columns, "
-            "control selection, search, sorting, pagination, row expansion, "
-            "and callback payloads from a single Python API."
+        "signature": signature_preview(
+            dmdt.DataTable,
+            "dmdt.DataTable",
+            max_params=8,
+            tail=2,
         ),
-        "returns": "Returns a Dash component instance with chainable Python helpers.",
+        "description": (
+            "Primary Dash table component for rendering records, shaping "
+            "columns, and controlling table state from one Python API."
+        ),
+        "returns": "Returns a Dash component instance with fluent Python helpers.",
         "methods": method_summary_rows,
         "method_details": DATA_TABLE_METHOD_DETAILS,
         "surface_rows": build_datatable_surface_rows(),
@@ -5316,9 +5436,36 @@ def option_table_control(
 
 
 def method_badges(methods):
+    targets = {
+        "DataTable": "#api-datatable",
+        "Column": "#api-column",
+        "ColumnGroup": "#api-column-group",
+        "SelectionConfig": "#api-selection-config",
+        "PaginationConfig": "#api-pagination-config",
+        "RowExpansionConfig": "#api-row-expansion-config",
+        **{
+            method["name"]: f"#api-method-{method['name']}"
+            for method in DATA_TABLE_METHOD_DETAILS
+        },
+    }
+
+    def resolve_target(label):
+        token = re.match(r"(?:dmdt\.)?([A-Za-z_][A-Za-z0-9_]*)", str(label or "").strip())
+        if not token:
+            return None
+        return targets.get(token.group(1))
+
     return dmc.Group(
         [
-            dmc.Badge(method, variant="light", color="blue", radius="sm")
+            (
+                html.A(
+                    dmc.Badge(method, variant="light", color="blue", radius="sm"),
+                    href=resolve_target(method),
+                    style={"textDecoration": "none", "color": "inherit"},
+                )
+                if resolve_target(method)
+                else dmc.Badge(method, variant="light", color="blue", radius="sm")
+            )
             for method in methods or []
         ],
         gap="xs",
@@ -5560,11 +5707,15 @@ def make_api_method_card(method):
             ]
         )
 
-    return dmc.Paper(
-        dmc.Stack(children, gap="md"),
-        withBorder=True,
-        radius="md",
-        p="md",
+    return html.Div(
+        dmc.Paper(
+            dmc.Stack(children, gap="md"),
+            withBorder=True,
+            radius="md",
+            p="md",
+        ),
+        id=f"api-method-{method['name']}",
+        style={"scrollMarginTop": "1rem"},
     )
 
 
@@ -5598,6 +5749,16 @@ def make_api_reference_item(item):
         children.extend(
             [
                 dmc.Title("Fluent Methods", order=4),
+                dmc.Text(
+                    "Use these links to jump straight to the detailed method docs below.",
+                    size="sm",
+                    c="dimmed",
+                ),
+                method_badges(
+                    [f"{method['name']}()" for method in item.get("method_details", [])]
+                )
+                if item.get("method_details")
+                else None,
                 make_api_reference_table(item["methods"]),
             ]
         )
@@ -5616,7 +5777,7 @@ def make_api_reference_item(item):
     if item.get("surface_rows"):
         children.extend(
             [
-                dmc.Title("Functionality-Driven Keyword Arguments and Attributes", order=4),
+                dmc.Title("Common Behavior Keywords and Attributes", order=4),
                 dmc.Text(
                     "These entries control data flow, interaction, callbacks, selection, sorting, pagination, expansion, loading state, and other table behavior.",
                     size="sm",
@@ -5627,7 +5788,7 @@ def make_api_reference_item(item):
                     columns=API_REFERENCE_SURFACE_COLUMNS,
                     id_accessor="rowId",
                 ),
-                dmc.Title("Style-Driven Keyword Arguments and Attributes", order=4),
+                dmc.Title("Common Style and Layout Keywords and Attributes", order=4),
                 dmc.Text(
                     "These entries primarily affect layout, spacing, borders, colors, sizing, and other visual presentation concerns.",
                     size="sm",
@@ -5643,9 +5804,9 @@ def make_api_reference_item(item):
     if item.get("all_parameters_rows"):
         children.extend(
             [
-                dmc.Title("All Functionality Parameters from DataTable.py", order=4),
+                dmc.Title("All Behavior-Oriented Constructor Keywords From `DataTable.py`", order=4),
                 dmc.Text(
-                    "This exhaustive table is sourced from the generated component in `dash_mantine_datatable/DataTable.py` and lists the canonical functionality-oriented constructor parameters exposed by the component.",
+                    "This exhaustive table is sourced from the generated component in `dash_mantine_datatable/DataTable.py`, so the canonical constructor keywords match what `dmdt.DataTable(...)` accepts.",
                     size="sm",
                     c="dimmed",
                 ),
@@ -5654,9 +5815,9 @@ def make_api_reference_item(item):
                     columns=API_REFERENCE_SURFACE_COLUMNS,
                     id_accessor="rowId",
                 ),
-                dmc.Title("All Style Parameters from DataTable.py", order=4),
+                dmc.Title("All Style and Layout Constructor Keywords From `DataTable.py`", order=4),
                 dmc.Text(
-                    "This exhaustive table lists the canonical style- and layout-oriented constructor parameters exposed by the generated component.",
+                    "This exhaustive table lists the canonical style- and layout-oriented constructor keywords exposed by the generated component.",
                     size="sm",
                     c="dimmed",
                 ),
@@ -5722,7 +5883,7 @@ def make_api_reference_section():
     return dmc.Stack(
         [
             dmc.Alert(
-                "This reference is intentionally curated around the props and attributes people reach for most often first, so the page stays approachable.",
+                "This reference keeps the narrative copy curated, while the constructor tables below are sourced from `dash_mantine_datatable/DataTable.py` so the documented keywords stay aligned with the generated component.",
                 color="blue",
                 variant="light",
             ),
@@ -5887,12 +6048,12 @@ app.layout = dmc.MantineProvider(
                 ),
                 category_divider(
                     "API reference",
-                    "Start here when you want definitions, fluent methods, and the most commonly used keyword arguments for the public Python API.",
+                    "Start here when you want a practical map of the public Python API: constructor keywords, fluent methods, helper builders, and the attributes that matter most in callbacks.",
                     category_id="category-api-reference",
                 ),
                 demo_section(
                     "0. Python API reference",
-                    "This section documents each public item exported by the package, with special emphasis on the attributes and keyword arguments people tend to use first.",
+                    "This section documents each public export with copy-paste-friendly summaries, direct links to fluent method docs, and constructor keywords sourced from `DataTable.py`.",
                     make_api_reference_section(),
                     section_id="section-api",
                     methods=[
@@ -5906,7 +6067,7 @@ app.layout = dmc.MantineProvider(
                     highlights=[
                         "DataTable lists fluent methods, common keyword arguments, and the instance attributes most likely to appear in callbacks.",
                         "Helper builders are documented as plain dictionary factories so it is clear what each one returns and when to reach for it.",
-                        "The reference tables are curated instead of exhaustive, which keeps the page readable while still making the component easy to pick up.",
+                        "The narrative sections stay approachable, while the generated constructor tables still expose the full canonical keyword surface.",
                     ],
                 ),
                 category_divider(

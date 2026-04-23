@@ -33,6 +33,7 @@ DataTable(...)
 from __future__ import annotations
 
 from copy import deepcopy
+import inspect
 import json
 from pathlib import Path
 from typing import Any
@@ -310,11 +311,26 @@ def Column(accessor: str | None = None, /, **kwargs: Any) -> dict[str, Any]:
         Description: Column width. You can pass a numeric pixel value or a CSS
         width string.
         Example: `width=140`.
-    **kwargs : Any
-        Description: Any additional column properties supported by the
-        frontend, including `cellsStyle`, `titleStyle`, `draggable`,
-        `toggleable`, and `resizable`.
+    cellsStyle : dict, optional
+        Description: Inline style mapping applied to body cells.
+        Example: `cellsStyle={"fontVariantNumeric": "tabular-nums"}`.
+    titleStyle : dict, optional
+        Description: Inline style mapping applied to the header cell.
+        Example: `titleStyle={"textTransform": "uppercase"}`.
+    draggable : bool, optional
+        Description: Allows the column to participate in column dragging.
+        Example: `draggable=True`.
+    toggleable : bool, optional
+        Description: Allows the column to be shown or hidden by column
+        customization controls.
+        Example: `toggleable=True`.
+    resizable : bool, optional
+        Description: Allows the column width to be resized by the user.
         Example: `resizable=True`.
+    defaultToggle : bool, optional
+        Description: Initial visibility state used when column toggling is
+        enabled.
+        Example: `defaultToggle=False`.
 
     Returns
     -------
@@ -379,9 +395,10 @@ def ColumnGroup(
     headerStyle : dict, optional
         Description: Header-specific style mapping forwarded to the frontend.
         Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
-    **kwargs : Any
-        Description: Any additional grouped-header properties supported by the
-        frontend.
+    textAlign : str, optional
+        Description: Alignment hint for grouped-header content.
+        Expected inputs: values accepted by Mantine/DataTable such as
+        `'left'`, `'center'`, `'right'`.
         Example: `textAlign="center"`.
 
     Returns
@@ -451,10 +468,6 @@ def SelectionConfig(**kwargs: Any) -> dict[str, Any]:
     selectionColumnStyle : dict, optional
         Description: Inline style mapping applied to the selection column.
         Example: `selectionColumnStyle={"width": 44}`.
-    **kwargs : Any
-        Description: Any additional selection props supported by the
-        component.
-        Example: `keepSelectionOnPageChange=True`.
 
     Returns
     -------
@@ -523,10 +536,6 @@ def PaginationConfig(**kwargs: Any) -> dict[str, Any]:
     paginationWithControls : bool, optional
         Description: Shows previous/next controls when `True`.
         Example: `paginationWithControls=True`.
-    **kwargs : Any
-        Description: Any additional pagination props supported by the
-        component.
-        Example: `paginationText=lambda info: f"{info['from']}-{info['to']}"`.
 
     Returns
     -------
@@ -566,10 +575,6 @@ def RowExpansionConfig(content: Any = None, /, **kwargs: Any) -> dict[str, Any]:
         Expected inputs: frontend-supported trigger values such as `'click'`
         when available.
         Example: `trigger="click"`.
-    **kwargs : Any
-        Description: Any additional row-expansion props supported by the
-        component.
-        Example: `collapseProps={"transitionDuration": 150}`.
 
     Returns
     -------
@@ -761,11 +766,6 @@ class DataTable(_GeneratedDataTable):
         Description: Local-storage key used to persist draggable, toggleable,
         or resizable column state in the browser.
         Example: `storeColumnsKey="employees-columns-v1"`.
-    **kwargs : Any
-        Description: Additional Dash/Mantine props supported by the frontend,
-        including styling hooks such as `style`, `styles`, `className`,
-        `classNames`, and `tableProps`.
-        Example: `tableProps={"highlightOnHover": True}`.
 
     Attributes
     ----------
@@ -803,6 +803,10 @@ class DataTable(_GeneratedDataTable):
 
     Notes
     -----
+    The complete constructor keyword surface comes from the generated
+    `DataTable.py` component. This wrapper keeps those canonical keywords and
+    adds a small set of Python-friendly aliases.
+
     Python-friendly aliases are accepted for a few common props, including
     `records -> data`, `group_by -> groupBy`, `group_aggregations ->
     groupAggregations`, `child_rows_accessor -> childRowsAccessor`, and
@@ -940,12 +944,37 @@ class DataTable(_GeneratedDataTable):
         bg : str | dict, optional
             Description: Mantine background color prop.
             Example: `bg="gray.0"`.
+        style : dict, optional
+            Description: Inline styles applied to the table wrapper.
+            Example: `style={"boxShadow": "var(--mantine-shadow-sm)"}`.
+        className : str, optional
+            Description: CSS class applied to the table wrapper.
+            Example: `className="employees-table"`.
+        tableProps : dict, optional
+            Description: Props forwarded to the underlying Mantine table
+            element.
+            Example: `tableProps={"style": {"tableLayout": "fixed"}}`.
+        scrollAreaProps : dict, optional
+            Description: Props forwarded to the table scroll area.
+            Example: `scrollAreaProps={"type": "never"}`.
         withTableBorder : bool, optional
             Description: Toggles the outer border.
             Example: `withTableBorder=True`.
         withColumnBorders : bool, optional
             Description: Toggles borders between columns.
             Example: `withColumnBorders=False`.
+        pinFirstColumn : bool, optional
+            Description: Pins the first visible column during horizontal
+            scrolling.
+            Example: `pinFirstColumn=True`.
+        pinLastColumn : bool, optional
+            Description: Pins the last visible column during horizontal
+            scrolling.
+            Example: `pinLastColumn=True`.
+        textSelectionDisabled : bool, optional
+            Description: Disables text selection, which helps interactive rows
+            and cells feel more intentional.
+            Example: `textSelectionDisabled=True`.
         striped : bool, optional
             Description: Alternates row backgrounds.
             Example: `striped=True`.
@@ -958,11 +987,6 @@ class DataTable(_GeneratedDataTable):
         loaderColor : str, optional
             Description: Loader color token.
             Example: `loaderColor="blue"`.
-        **kwargs : Any
-            Description: Additional layout or style props such as `style`,
-            `className`, `tableProps`, `pinFirstColumn`, or
-            `textSelectionDisabled`.
-            Example: `style={"boxShadow": "var(--mantine-shadow-sm)"}`.
 
         Returns
         -------
@@ -973,7 +997,9 @@ class DataTable(_GeneratedDataTable):
         -----
         Mapping props like `style`, `styles`, `classNames`, `tableProps`, and
         `scrollAreaProps` are merged with existing values instead of being
-        replaced wholesale.
+        replaced wholesale. Layout helpers also accept other canonical
+        `DataTable` constructor keywords when that keeps a fluent chain more
+        readable.
 
         Examples
         --------
@@ -1028,6 +1054,12 @@ class DataTable(_GeneratedDataTable):
             Description: Offset used when sticky headers need to clear a fixed
             app header.
             Example: `stickyHeaderOffset=56`.
+        noHeader : bool, optional
+            Description: Hides the header row.
+            Example: `noHeader=True`.
+        textSelectionDisabled : bool, optional
+            Description: Disables text selection inside the table.
+            Example: `textSelectionDisabled=True`.
         defaultColumnProps : dict, optional
             Description: Shared defaults applied to every column unless a
             column overrides them.
@@ -1037,10 +1069,6 @@ class DataTable(_GeneratedDataTable):
             Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`,
             `'md'`, `'lg'`, `'xl'`, or a numeric size when supported.
             Example: `paginationSize="sm"`.
-        **kwargs : Any
-            Description: Additional table-level props supported by the
-            component.
-            Example: `tableProps={"striped": True}`.
 
         Returns
         -------
@@ -1050,7 +1078,8 @@ class DataTable(_GeneratedDataTable):
         Notes
         -----
         This is functionally an alias of `update_layout()`. The separate name
-        exists for readability in fluent chains.
+        exists for readability in fluent chains, especially when you are
+        grouping table shell props separately from column or row updates.
 
         Examples
         --------
@@ -1124,10 +1153,21 @@ class DataTable(_GeneratedDataTable):
         titleStyle : dict, optional
             Description: Header-cell inline style mapping.
             Example: `titleStyle={"textTransform": "uppercase"}`.
-        **kwargs : Any
-            Description: Additional column keys such as `ellipsis`,
-            `draggable`, `toggleable`, `resizable`, or `defaultToggle`.
+        ellipsis : bool, optional
+            Description: Truncates long cell content with ellipsis behavior.
+            Example: `ellipsis=True`.
+        draggable : bool, optional
+            Description: Allows the targeted columns to be reordered.
+            Example: `draggable=True`.
+        toggleable : bool, optional
+            Description: Allows the targeted columns to be shown or hidden.
+            Example: `toggleable=True`.
+        resizable : bool, optional
+            Description: Allows the targeted columns to be resized.
             Example: `resizable=True`.
+        defaultToggle : bool, optional
+            Description: Initial visibility state for toggleable columns.
+            Example: `defaultToggle=False`.
 
         Returns
         -------
@@ -1138,7 +1178,9 @@ class DataTable(_GeneratedDataTable):
         -----
         Nested mapping properties such as `style`, `titleStyle`, and
         `cellsStyle` are merged recursively for matching columns. If no match
-        is found and the update includes an `accessor`, the column is appended.
+        is found and the update includes an `accessor`, the column is
+        appended. For the broader column-key surface, `update_columns()`
+        accepts the same column fields documented by `Column(...)`.
 
         Examples
         --------
@@ -1225,15 +1267,14 @@ class DataTable(_GeneratedDataTable):
         style : dict, optional
             Description: Inline style mapping for the group header.
             Example: `style={"textAlign": "center"}`.
+        headerStyle : dict, optional
+            Description: Header-specific style mapping for the group.
+            Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
         textAlign : str, optional
             Description: Alignment hint for header content.
             Expected inputs: values accepted by Mantine/DataTable such as
             `'left'`, `'center'`, `'right'`.
             Example: `textAlign="center"`.
-        **kwargs : Any
-            Description: Additional group-header properties supported by the
-            component.
-            Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
 
         Returns
         -------
@@ -1244,7 +1285,8 @@ class DataTable(_GeneratedDataTable):
         -----
         When `columns` or nested `groups` are provided, this helper resolves
         accessor strings against the current column definitions so grouped
-        headers stay in sync with the table's columns.
+        headers stay in sync with the table's columns. The accepted group keys
+        match the fields documented by `ColumnGroup(...)`.
 
         Examples
         --------
@@ -1346,9 +1388,8 @@ class DataTable(_GeneratedDataTable):
         rowExpansion : dict, optional
             Description: Row-expansion configuration.
             Example: `rowExpansion=RowExpansionConfig(content="Details")`.
-        **kwargs : Any
-            Description: Additional row-related props supported by the
-            component.
+        rowBorderColor : str | dict, optional
+            Description: Row border color override applied at the table level.
             Example: `rowBorderColor="gray.3"`.
 
         Returns
@@ -1534,10 +1575,6 @@ class DataTable(_GeneratedDataTable):
         selectionColumnStyle : dict, optional
             Description: Inline styles for the selection column.
             Example: `selectionColumnStyle={"width": 44}`.
-        **kwargs : Any
-            Description: Additional selection props supported by the
-            component.
-            Example: `keepSelectionOnPageChange=True`.
 
         Returns
         -------
@@ -1604,10 +1641,6 @@ class DataTable(_GeneratedDataTable):
         paginationWithControls : bool, optional
             Description: Shows previous/next page controls.
             Example: `paginationWithControls=True`.
-        **kwargs : Any
-            Description: Additional pagination props supported by the
-            component.
-            Example: `paginationText="Rows per page"`.
 
         Returns
         -------
@@ -1645,9 +1678,6 @@ class DataTable(_GeneratedDataTable):
         sortIcons : dict, optional
             Description: Custom icons or components for sorted/unsorted states.
             Example: `sortIcons={"sorted": dmc.Text("v"), "unsorted": dmc.Text("-")}`.
-        **kwargs : Any
-            Description: Additional sorting props supported by the component.
-            Example: `multiSort=True`.
 
         Returns
         -------
@@ -1685,9 +1715,6 @@ class DataTable(_GeneratedDataTable):
         searchableAccessors : list[str], optional
             Description: Limits client-side search to specific record fields.
             Example: `searchableAccessors=["name", "team", "role"]`.
-        **kwargs : Any
-            Description: Additional search props supported by the component.
-            Example: `debounce=150`.
 
         Returns
         -------
@@ -1764,6 +1791,285 @@ class DataTable(_GeneratedDataTable):
         """
         self.expandedRecordIds = []
         return self
+
+
+def _doc_parameter(
+    name: str,
+    *,
+    kind=inspect.Parameter.KEYWORD_ONLY,
+    default: Any = inspect.Signature.empty,
+) -> inspect.Parameter:
+    kwargs: dict[str, Any] = {"name": name, "kind": kind}
+    if default is not inspect.Signature.empty:
+        kwargs["default"] = default
+    return inspect.Parameter(**kwargs)
+
+
+def _set_doc_signature(target: Any, parameters: list[inspect.Parameter]) -> None:
+    target.__signature__ = inspect.Signature(parameters)
+
+
+_generated_datatable_init_parameters = [
+    parameter
+    for parameter in inspect.signature(_GeneratedDataTable.__init__).parameters.values()
+    if parameter.kind != inspect.Parameter.VAR_KEYWORD
+]
+
+DataTable.__signature__ = inspect.Signature(_generated_datatable_init_parameters[1:])
+DataTable.__init__.__signature__ = inspect.Signature(_generated_datatable_init_parameters)
+
+Column.__signature__ = inspect.Signature(
+    [
+        _doc_parameter(
+            "accessor",
+            kind=inspect.Parameter.POSITIONAL_ONLY,
+            default=None,
+        ),
+        _doc_parameter("title", default=None),
+        _doc_parameter("presentation", default=None),
+        _doc_parameter("sortable", default=None),
+        _doc_parameter("editable", default=None),
+        _doc_parameter("editor", default=None),
+        _doc_parameter("render", default=None),
+        _doc_parameter("filter", default=None),
+        _doc_parameter("textAlign", default=None),
+        _doc_parameter("width", default=None),
+        _doc_parameter("cellsStyle", default=None),
+        _doc_parameter("titleStyle", default=None),
+        _doc_parameter("draggable", default=None),
+        _doc_parameter("toggleable", default=None),
+        _doc_parameter("resizable", default=None),
+        _doc_parameter("defaultToggle", default=None),
+    ]
+)
+
+ColumnGroup.__signature__ = inspect.Signature(
+    [
+        _doc_parameter(
+            "group_id",
+            kind=inspect.Parameter.POSITIONAL_ONLY,
+            default=None,
+        ),
+        _doc_parameter("columns", default=None),
+        _doc_parameter("groups", default=None),
+        _doc_parameter("title", default=None),
+        _doc_parameter("style", default=None),
+        _doc_parameter("headerStyle", default=None),
+        _doc_parameter("textAlign", default=None),
+    ]
+)
+
+SelectionConfig.__signature__ = inspect.Signature(
+    [
+        _doc_parameter("selectionTrigger", default=None),
+        _doc_parameter("selectedRecordIds", default=None),
+        _doc_parameter("selectedRecords", default=None),
+        _doc_parameter("selectableRowRules", default=None),
+        _doc_parameter("disabledSelectionRowRules", default=None),
+        _doc_parameter("selectionCheckboxRules", default=None),
+        _doc_parameter("selectionCheckboxProps", default=None),
+        _doc_parameter("allRecordsSelectionCheckboxProps", default=None),
+        _doc_parameter("selectionColumnClassName", default=None),
+        _doc_parameter("selectionColumnStyle", default=None),
+    ]
+)
+
+PaginationConfig.__signature__ = inspect.Signature(
+    [
+        _doc_parameter("page", default=None),
+        _doc_parameter("pageSize", default=None),
+        _doc_parameter("recordsPerPage", default=None),
+        _doc_parameter("totalRecords", default=None),
+        _doc_parameter("recordsPerPageOptions", default=None),
+        _doc_parameter("pageSizeOptions", default=None),
+        _doc_parameter("recordsPerPageLabel", default=None),
+        _doc_parameter("paginationSize", default=None),
+        _doc_parameter("paginationActiveTextColor", default=None),
+        _doc_parameter("paginationActiveBackgroundColor", default=None),
+        _doc_parameter("paginationWithEdges", default=None),
+        _doc_parameter("paginationWithControls", default=None),
+    ]
+)
+
+RowExpansionConfig.__signature__ = inspect.Signature(
+    [
+        _doc_parameter(
+            "content",
+            kind=inspect.Parameter.POSITIONAL_ONLY,
+            default=None,
+        ),
+        _doc_parameter("allowMultiple", default=None),
+        _doc_parameter("trigger", default=None),
+    ]
+)
+
+_set_doc_signature(
+    DataTable.update_layout,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("radius", default=None),
+        _doc_parameter("direction", default=None),
+        _doc_parameter("height", default=None),
+        _doc_parameter("minHeight", default=None),
+        _doc_parameter("maxHeight", default=None),
+        _doc_parameter("bg", default=None),
+        _doc_parameter("style", default=None),
+        _doc_parameter("className", default=None),
+        _doc_parameter("tableProps", default=None),
+        _doc_parameter("scrollAreaProps", default=None),
+        _doc_parameter("withTableBorder", default=None),
+        _doc_parameter("withColumnBorders", default=None),
+        _doc_parameter("striped", default=None),
+        _doc_parameter("pinFirstColumn", default=None),
+        _doc_parameter("pinLastColumn", default=None),
+        _doc_parameter("textSelectionDisabled", default=None),
+        _doc_parameter("loadingText", default=None),
+        _doc_parameter("loaderType", default=None),
+        _doc_parameter("loaderColor", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_table_properties,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("withRowBorders", default=None),
+        _doc_parameter("withTableBorder", default=None),
+        _doc_parameter("withColumnBorders", default=None),
+        _doc_parameter("horizontalSpacing", default=None),
+        _doc_parameter("verticalSpacing", default=None),
+        _doc_parameter("verticalAlign", default=None),
+        _doc_parameter("striped", default=None),
+        _doc_parameter("highlightOnHover", default=None),
+        _doc_parameter("stickyHeader", default=None),
+        _doc_parameter("stickyHeaderOffset", default=None),
+        _doc_parameter("noHeader", default=None),
+        _doc_parameter("textSelectionDisabled", default=None),
+        _doc_parameter("defaultColumnProps", default=None),
+        _doc_parameter("paginationSize", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_columns,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("columns", kind=inspect.Parameter.VAR_POSITIONAL),
+        _doc_parameter("selector", default=None),
+        _doc_parameter("overwrite", default=False),
+        _doc_parameter("title", default=None),
+        _doc_parameter("presentation", default=None),
+        _doc_parameter("sortable", default=None),
+        _doc_parameter("textAlign", default=None),
+        _doc_parameter("width", default=None),
+        _doc_parameter("editable", default=None),
+        _doc_parameter("editor", default=None),
+        _doc_parameter("render", default=None),
+        _doc_parameter("filter", default=None),
+        _doc_parameter("cellsStyle", default=None),
+        _doc_parameter("titleStyle", default=None),
+        _doc_parameter("ellipsis", default=None),
+        _doc_parameter("draggable", default=None),
+        _doc_parameter("toggleable", default=None),
+        _doc_parameter("resizable", default=None),
+        _doc_parameter("defaultToggle", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.group_columns,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("group_defs", kind=inspect.Parameter.VAR_POSITIONAL),
+        _doc_parameter("selector", default=None),
+        _doc_parameter("title", default=None),
+        _doc_parameter("columns", default=None),
+        _doc_parameter("groups", default=None),
+        _doc_parameter("style", default=None),
+        _doc_parameter("headerStyle", default=None),
+        _doc_parameter("textAlign", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_rows,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("selector", default=None),
+        _doc_parameter("rowColor", default=None),
+        _doc_parameter("color", default=None),
+        _doc_parameter("rowBackgroundColor", default=None),
+        _doc_parameter("backgroundColor", default=None),
+        _doc_parameter("rowClassName", default=None),
+        _doc_parameter("className", default=None),
+        _doc_parameter("rowStyle", default=None),
+        _doc_parameter("style", default=None),
+        _doc_parameter("rowAttributes", default=None),
+        _doc_parameter("attributes", default=None),
+        _doc_parameter("rowDragging", default=None),
+        _doc_parameter("draggable", default=None),
+        _doc_parameter("idAccessor", default=None),
+        _doc_parameter("expandedRecordIds", default=None),
+        _doc_parameter("rowExpansion", default=None),
+        _doc_parameter("rowBorderColor", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_selection,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("selectionTrigger", default=None),
+        _doc_parameter("selectedRecordIds", default=None),
+        _doc_parameter("selectedRecords", default=None),
+        _doc_parameter("selectableRowRules", default=None),
+        _doc_parameter("disabledSelectionRowRules", default=None),
+        _doc_parameter("selectionCheckboxRules", default=None),
+        _doc_parameter("selectionCheckboxProps", default=None),
+        _doc_parameter("allRecordsSelectionCheckboxProps", default=None),
+        _doc_parameter("selectionColumnClassName", default=None),
+        _doc_parameter("selectionColumnStyle", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_pagination,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("page", default=None),
+        _doc_parameter("pageSize", default=None),
+        _doc_parameter("recordsPerPage", default=None),
+        _doc_parameter("totalRecords", default=None),
+        _doc_parameter("recordsPerPageOptions", default=None),
+        _doc_parameter("pageSizeOptions", default=None),
+        _doc_parameter("recordsPerPageLabel", default=None),
+        _doc_parameter("paginationSize", default=None),
+        _doc_parameter("paginationActiveTextColor", default=None),
+        _doc_parameter("paginationActiveBackgroundColor", default=None),
+        _doc_parameter("paginationWithEdges", default=None),
+        _doc_parameter("paginationWithControls", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_sorting,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("sortStatus", default=None),
+        _doc_parameter("sortMode", default=None),
+        _doc_parameter("sortIcons", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_search,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("searchQuery", default=None),
+        _doc_parameter("searchMode", default=None),
+        _doc_parameter("searchableAccessors", default=None),
+    ],
+)
 
 
 __all__ = [
