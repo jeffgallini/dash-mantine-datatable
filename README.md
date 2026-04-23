@@ -136,11 +136,42 @@ python usage.py
 
 ```powershell
 .\scripts\check-release.ps1
-python -m twine upload --repository testpypi dist/*
 ```
 
-Smoke-test the TestPyPI release in a fresh virtual environment before uploading
-the same artifact set to PyPI. The release check rebuilds the JavaScript bundle,
-runs the test suite, builds the sdist and wheel, and verifies that the release
-artifacts include the bundled JS assets, `metadata.json`, `package-info.json`,
-`README.md`, and `LICENSE`.
+```bash
+python scripts/check_release.py
+```
+
+Use `staging` as the integration branch for contributor PRs, then open a
+release PR from `staging` into `main` when you are ready to publish. The
+release PR title is the source of truth for the next package version, so title
+it like `v0.1.1 Release - Improved Documentation and reduced console warnings`.
+
+The release guard validates that:
+
+- the PR is `staging -> main`
+- the title starts with `vX.Y.Z Release`
+- the requested version is newer than the current package version
+
+When that release PR is merged, `.github/workflows/publish-release.yml` will:
+
+- stamp the requested version into `package.json`, `package-lock.json`,
+  `dash_mantine_datatable/package-info.json`, and `Project.toml`
+- promote `## Unreleased` in `CHANGELOG.md` into `## X.Y.Z - YYYY-MM-DD`
+  or, if needed, create a release section from the title summary
+- commit those release metadata changes back to `main`
+- rebuild, test, package, upload to PyPI, and create or update a GitHub release
+
+Recommended changelog flow:
+
+- Keep a `## Unreleased` section at the top of `CHANGELOG.md` on `staging`.
+- Add release notes there as contributors land changes.
+- Let the publish workflow convert that section into the final versioned entry.
+
+One-time GitHub setup:
+
+- Create a long-lived `staging` branch.
+- Protect `main` so changes land by pull request, not direct push.
+- Require the `Release PR Guard` workflow on `main`.
+- Add a `PYPI_API_TOKEN` secret to the `pypi` environment used by the publish
+  workflow.
