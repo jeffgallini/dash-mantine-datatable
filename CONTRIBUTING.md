@@ -27,11 +27,11 @@ python usage.py
 
 Before opening the `staging -> main` release PR:
 
-- Bump the version in `package.json`, `package-lock.json`,
-  `dash_mantine_datatable/package-info.json`, and `Project.toml`.
-- Add a matching `CHANGELOG.md` section whose heading starts with
-  `## X.Y.Z - YYYY-MM-DD`.
-- Run the release check locally.
+- Add release notes under `## Unreleased` in `CHANGELOG.md`.
+- Decide the next version and put it in the PR title as
+  `vX.Y.Z Release - Summary`.
+- Run the release check locally if you want a preflight build/test/package
+  pass.
 
 ```powershell
 .\scripts\check-release.ps1
@@ -43,15 +43,22 @@ python scripts/check_release.py
 
 ## Automated publishing
 
-Release pull requests into `main` must be titled `vX.Y.Z Release` and may add
-extra descriptive text after that prefix. The `Release PR Guard` workflow
-rejects any PR to `main` that is not `staging -> main`, does not use the
-required title format, or has mismatched version/changelog metadata.
+Release pull requests into `main` must come from `staging` and must be titled
+`vX.Y.Z Release`, optionally followed by ` - Summary`.
+
+The `Release PR Guard` workflow checks that:
+
+- the PR is `staging -> main`
+- the title format is valid
+- the requested version is newer than the current package version
 
 After a valid release PR is merged, `.github/workflows/publish-release.yml`
-will rebuild the package, run the tests, publish `dist/*` to PyPI, and create
-or update a GitHub release tagged `vX.Y.Z` using the matching
-`CHANGELOG.md` section as the release notes.
+will:
+
+- write the requested release version into the package metadata files
+- convert `CHANGELOG.md` into the final versioned release notes
+- commit those release metadata updates back to `main`
+- rebuild, test, publish to PyPI, and create or update the GitHub release
 
 ## One-time maintainer setup
 

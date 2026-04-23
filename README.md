@@ -143,21 +143,30 @@ python scripts/check_release.py
 ```
 
 Use `staging` as the integration branch for contributor PRs, then open a
-release PR from `staging` into `main` when you are ready to publish. Release
-PRs must be titled `vX.Y.Z Release` and may optionally include extra text after
-that prefix. Before opening the PR, update these files to the same version:
+release PR from `staging` into `main` when you are ready to publish. The
+release PR title is the source of truth for the next package version, so title
+it like `v0.1.1 Release - Improved Documentation and reduced console warnings`.
 
-- `package.json`
-- `package-lock.json`
-- `dash_mantine_datatable/package-info.json`
-- `Project.toml`
-- `CHANGELOG.md`
+The release guard validates that:
 
-The `CHANGELOG.md` entry for the release must start with a heading like
-`## X.Y.Z - YYYY-MM-DD`. On merge, `.github/workflows/publish-release.yml`
-re-runs the release checks, uploads the package to PyPI, and creates or updates
-a GitHub release tagged `vX.Y.Z` whose notes come from the matching changelog
-section.
+- the PR is `staging -> main`
+- the title starts with `vX.Y.Z Release`
+- the requested version is newer than the current package version
+
+When that release PR is merged, `.github/workflows/publish-release.yml` will:
+
+- stamp the requested version into `package.json`, `package-lock.json`,
+  `dash_mantine_datatable/package-info.json`, and `Project.toml`
+- promote `## Unreleased` in `CHANGELOG.md` into `## X.Y.Z - YYYY-MM-DD`
+  or, if needed, create a release section from the title summary
+- commit those release metadata changes back to `main`
+- rebuild, test, package, upload to PyPI, and create or update a GitHub release
+
+Recommended changelog flow:
+
+- Keep a `## Unreleased` section at the top of `CHANGELOG.md` on `staging`.
+- Add release notes there as contributors land changes.
+- Let the publish workflow convert that section into the final versioned entry.
 
 One-time GitHub setup:
 

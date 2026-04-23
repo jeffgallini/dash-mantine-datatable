@@ -21,11 +21,11 @@ jobs:
     environment:
       name: pypi
     steps:
-      - name: Check out merged release commit
+      - name: Check out main
         uses: actions/checkout@v6
         with:
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -38,6 +38,26 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Validate release request
+        id: release
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          version="$(python scripts/validate_release_pr.py --allow-current-version --print-version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Apply release version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          RELEASE_DATE: ${{ github.event.pull_request.merged_at }}
+        shell: bash
+        run: |
+          export RELEASE_DATE="${RELEASE_DATE%%T*}"
+          python scripts/apply_release_version.py
+
       - name: Install Node dependencies
         run: npm ci --legacy-peer-deps
 
@@ -46,25 +66,31 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r tests/requirements.txt
 
-      - name: Validate release metadata
-        id: release
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        shell: bash
-        run: |
-          version="$(python scripts/validate_release_pr.py --print-version)"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
       - name: Build and verify release artifacts
         run: python scripts/check_release.py
 
       - name: Ensure PyPI token is configured
-        if: ${{ secrets.PYPI_API_TOKEN == '' }}
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        shell: bash
         run: |
-          echo "Missing PYPI_API_TOKEN secret in the 'pypi' environment." >&2
-          exit 1
+          if [ -z "${PYPI_API_TOKEN}" ]; then
+            echo "Missing PYPI_API_TOKEN secret in the 'pypi' environment." >&2
+            exit 1
+          fi
+
+      - name: Commit release metadata
+        shell: bash
+        run: |
+          if git diff --quiet -- package.json package-lock.json dash_mantine_datatable/package-info.json Project.toml CHANGELOG.md; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json dash_mantine_datatable/package-info.json Project.toml CHANGELOG.md
+          git commit -m "chore: release v${{ steps.release.outputs.version }}"
+          git push origin "HEAD:${{ github.event.pull_request.base.ref }}"
 
       - name: Publish package to PyPI
         env:
@@ -82,8 +108,9 @@ jobs:
           RELEASE_TITLE: ${{ github.event.pull_request.title }}
         shell: bash
         run: |
+          release_target="$(git rev-parse HEAD)"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes-file "$RUNNER_TEMP/release-notes.md"
+            gh release edit "$RELEASE_TAG" --target "$release_target" --title "$RELEASE_TITLE" --notes-file "$RUNNER_TEMP/release-notes.md"
           else
-            gh release create "$RELEASE_TAG" --target "${GITHUB_SHA}" --title "$RELEASE_TITLE" --notes-file "$RUNNER_TEMP/release-notes.md"
+            gh release create "$RELEASE_TAG" --target "$release_target" --title "$RELEASE_TITLE" --notes-file "$RUNNER_TEMP/release-notes.md"
           fi

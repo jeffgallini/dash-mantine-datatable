@@ -7,16 +7,15 @@ import sys
 from release_helpers import (
     ReleaseValidationError,
     ensure_consistent_versions,
-    extract_changelog_section,
+    ensure_release_notes_source,
+    ensure_release_version_progression,
     parse_release_title,
 )
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=(
-            "Validate that a release PR follows the staging-to-main release flow."
-        )
+        description="Validate a staging-to-main release pull request."
     )
     parser.add_argument(
         "--title",
@@ -42,6 +41,11 @@ def _parser() -> argparse.ArgumentParser:
         "--expected-head",
         default="staging",
         help="Branch that release PRs must originate from.",
+    )
+    parser.add_argument(
+        "--allow-current-version",
+        action="store_true",
+        help="Allow the requested release version to match the current repo version.",
     )
     parser.add_argument(
         "--print-version",
@@ -75,16 +79,22 @@ def main() -> int:
                 f"Release PRs must come from '{args.expected_head}', not '{args.head_ref}'."
             )
 
-        version = parse_release_title(args.title)
-        ensure_consistent_versions(expected_version=version)
-        extract_changelog_section(version)
+        release = parse_release_title(args.title)
+        current_version = ensure_consistent_versions()
+        ensure_release_version_progression(
+            release.version,
+            current_version,
+            allow_equal=args.allow_current_version,
+        )
+        ensure_release_notes_source(release.version, release.summary)
 
         if args.print_version:
-            print(version)
+            print(release.version)
         else:
             print(
                 f"Validated release PR '{args.title}' for {args.head_ref} -> "
-                f"{args.base_ref} with version {version}."
+                f"{args.base_ref}. Requested version {release.version} advances "
+                f"from current version {current_version}."
             )
         return 0
     except ReleaseValidationError as error:
