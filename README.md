@@ -1,5 +1,5 @@
 # dash-mantine-datatable
-
+ 
 `dash-mantine-datatable` is a Dash wrapper around Mantine DataTable for apps
 that already use `dash-mantine-components` and want a table that feels native
 to the Mantine stack. It adds a Dash-friendly prop model, Mantine style props,
