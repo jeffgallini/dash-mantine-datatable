@@ -87,13 +87,6 @@ of a Mantine app and you value a smaller Dash-native API. Choose
 `dash-ag-grid` when the grid itself is the power-user surface and you need row
 models, export, pivoting, or other spreadsheet-grade features.
 
-Useful references:
-
-- [`dash-ag-grid` docs](https://dash.plotly.com/dash-ag-grid)
-- [Dash AG Grid row models](https://dash.plotly.com/dash-ag-grid/row-models)
-- [Dash AG Grid enterprise features](https://dash.plotly.com/dash-ag-grid/enterprise-ag-grid)
-- [AG Grid community vs enterprise](https://www.ag-grid.com/javascript-data-grid/community-vs-enterprise/)
-
 ## Helper Example
 
 ```python
