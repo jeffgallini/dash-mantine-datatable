@@ -18,9 +18,11 @@ htmlcov/
 node_modules/
 pytest-cache-files-*/
 pytest-tmp/
+site/
 venv/
 *.egg-info/
 *.log
 *.py[cod]
 *.tgz
 .pypirc
+test.ipynb

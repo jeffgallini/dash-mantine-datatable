@@ -12,6 +12,13 @@ grouping, rows, selection, pagination, sorting, and search.
 pip install dash-mantine-datatable
 ```
 
+Install the optional demo dependency bundle when you want to run the live
+market-data examples from `usage.py`:
+
+```bash
+pip install "dash-mantine-datatable[demo]"
+```
+
 ## Quick Start
 
 ```python
@@ -105,6 +112,22 @@ table = (
     .update_pagination(recordsPerPage=10)
 )
 ```
+
+## API Docs
+
+Build the package API docs locally with `pdoc`:
+
+```bash
+python -m pip install -e ".[docs]"
+python scripts/build_docs.py
+```
+
+This generates a static site in `site/`. The repository also includes
+`.github/workflows/docs.yml`, which rebuilds the same docs and deploys them to
+GitHub Pages whenever `main` changes.
+
+To enable deployment on GitHub, open `Settings -> Pages` and set the publishing
+source to `GitHub Actions`.
 
 ## Local Development
 
