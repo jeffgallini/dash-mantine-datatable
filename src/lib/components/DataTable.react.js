@@ -23,6 +23,7 @@ import {
 
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+const NOOP_SET_PROPS = () => {};
 const GROUP_RECORD_PREFIX = '__group__';
 const GROUP_INDENT_SIZE = 20;
 const TEMPLATE_TOKEN_PATTERN = /\{([^}]+)\}/g;
@@ -82,6 +83,9 @@ const ROOT_STYLE_PROP_NAMES = [
 
 const isNil = (value) => value === null || value === undefined;
 
+const isPlainObject = (value) =>
+    value && typeof value === 'object' && !Array.isArray(value);
+
 const pickDefinedProps = (source, keys) =>
     keys.reduce((accumulator, key) => {
         if (!isNil(source[key])) {
@@ -125,6 +129,23 @@ const isDryComponent = (value) =>
             value.namespace &&
             value.props
     );
+
+const DASH_COMPONENT_TYPE_NAMES = new WeakMap();
+
+const trackDashComponentType = (componentType, typeName) => {
+    if (
+        componentType &&
+        (typeof componentType === 'function' ||
+            (typeof componentType === 'object' && componentType !== null))
+    ) {
+        DASH_COMPONENT_TYPE_NAMES.set(componentType, typeName);
+    }
+
+    return componentType;
+};
+
+const isMaterializedDashComponent = (node) =>
+    React.isValidElement(node) && DASH_COMPONENT_TYPE_NAMES.has(node.type);
 
 const getAccessorValue = (record, accessor) => {
     if (!record || !accessor) {
@@ -316,6 +337,10 @@ const getEditorTypeName = (node) => {
         return node.type;
     }
 
+    if (DASH_COMPONENT_TYPE_NAMES.has(node.type)) {
+        return DASH_COMPONENT_TYPE_NAMES.get(node.type);
+    }
+
     return node.type?.displayName || node.type?.name;
 };
 
@@ -393,10 +418,70 @@ const isTextLikeEditor = (editorDefinition) =>
         getEditorTypeName(editorDefinition)
     );
 
+const FILTER_VALUE_PROP_BY_TYPE = {
+    Checkbox: 'checked',
+    Switch: 'checked',
+};
+
+const FILTER_TEXT_CONTROL_TYPES = new Set([
+    'Autocomplete',
+    'JsonInput',
+    'PasswordInput',
+    'PinInput',
+    'TextInput',
+    'Textarea',
+]);
+
+const FILTER_MULTI_CONTROL_TYPES = new Set([
+    'CheckboxGroup',
+    'MultiSelect',
+    'TagsInput',
+]);
+
+const FILTER_RANGE_CONTROL_TYPES = new Set(['RangeSlider']);
+
+const FILTER_DATE_CONTROL_TYPES = new Set([
+    'DateInput',
+    'DatePickerInput',
+    'DateTimePicker',
+    'MonthPickerInput',
+    'TimeInput',
+    'YearPickerInput',
+]);
+
+const FILTER_EQUALITY_CONTROL_TYPES = new Set([
+    'ChipGroup',
+    'ColorInput',
+    'ColorPicker',
+    'NativeSelect',
+    'NumberInput',
+    'RadioGroup',
+    'Rating',
+    'SegmentedControl',
+    'Select',
+]);
+
+const FILTER_CONTROL_TYPES = new Set([
+    ...FILTER_TEXT_CONTROL_TYPES,
+    ...FILTER_MULTI_CONTROL_TYPES,
+    ...FILTER_RANGE_CONTROL_TYPES,
+    ...FILTER_DATE_CONTROL_TYPES,
+    ...FILTER_EQUALITY_CONTROL_TYPES,
+    'Checkbox',
+    'Switch',
+]);
+
+const FILTER_INACTIVE_STRING_VALUES = new Set(['all', '__all__']);
+
 const mergeEditorNestedProps = (value, overrides) =>
     value && typeof value === 'object' && !Array.isArray(value)
         ? { ...value, ...overrides }
         : overrides;
+
+const mergeFilterNestedProps = (value, defaults) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+        ? { ...defaults, ...value }
+        : defaults;
 
 const enhanceEditorNode = (
     editorNode,
@@ -450,6 +535,832 @@ const enhanceEditorNode = (
     };
 
     return React.cloneElement(editorNode, nextProps);
+};
+
+const safeStringify = (value) => {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+};
+
+const serializeComponentId = (id) => {
+    if (isNil(id)) {
+        return undefined;
+    }
+
+    if (typeof id === 'string' || typeof id === 'number') {
+        return String(id);
+    }
+
+    return safeStringify(id);
+};
+
+const getNodeProps = (node) => {
+    if (React.isValidElement(node) || isDryComponent(node)) {
+        return node.props || EMPTY_OBJECT;
+    }
+
+    return EMPTY_OBJECT;
+};
+
+const resolveFilterValueProp = (column, filterNode) => {
+    if (typeof column?.filterValueProp === 'string') {
+        return column.filterValueProp;
+    }
+
+    const typeName = getEditorTypeName(filterNode);
+
+    if (FILTER_VALUE_PROP_BY_TYPE[typeName]) {
+        return FILTER_VALUE_PROP_BY_TYPE[typeName];
+    }
+
+    const props = getNodeProps(filterNode);
+
+    if (
+        Object.prototype.hasOwnProperty.call(props, 'checked') ||
+        Object.prototype.hasOwnProperty.call(props, 'defaultChecked')
+    ) {
+        return 'checked';
+    }
+
+    return 'value';
+};
+
+const isFilterControlNode = (node) => {
+    const props = getNodeProps(node);
+
+    if (props.filterRegistration === false || props.autoFilter === false) {
+        return false;
+    }
+
+    const typeName = getEditorTypeName(node);
+    const hasDashValueProp =
+        typeof props.setProps === 'function' &&
+        props.setProps !== NOOP_SET_PROPS &&
+        ['value', 'defaultValue', 'checked', 'defaultChecked'].some((key) =>
+            Object.prototype.hasOwnProperty.call(props, key)
+        );
+
+    return (
+        FILTER_CONTROL_TYPES.has(typeName) ||
+        props.filterRegistration === true ||
+        props.autoFilter === true ||
+        hasDashValueProp
+    );
+};
+
+const getFilterControlKey = (node, column, nodePath = EMPTY_ARRAY) => {
+    const serializedId = serializeComponentId(getNodeProps(node).id);
+    const pathKey = nodePath.length ? nodePath.join('.') : 'root';
+    return serializedId || `${column?.accessor || '__filter__'}:${pathKey}`;
+};
+
+const getFilterDefaultValue = (control) => {
+    const props = control.props || EMPTY_OBJECT;
+
+    if (Object.prototype.hasOwnProperty.call(props, control.valueProp)) {
+        return props[control.valueProp];
+    }
+
+    const defaultValueProp =
+        control.valueProp === 'checked' ? 'defaultChecked' : 'defaultValue';
+
+    if (Object.prototype.hasOwnProperty.call(props, defaultValueProp)) {
+        return props[defaultValueProp];
+    }
+
+    return undefined;
+};
+
+const collectFilterControls = (node, column, nodePath = EMPTY_ARRAY) => {
+    if (React.isValidElement(node) || isDryComponent(node)) {
+        const props = getNodeProps(node);
+        const controls = [];
+
+        if (isFilterControlNode(node)) {
+            const valueProp = resolveFilterValueProp(column, node);
+            controls.push({
+                key: getFilterControlKey(node, column, nodePath),
+                path: nodePath,
+                props,
+                typeName: getEditorTypeName(node),
+                valueProp,
+            });
+        }
+
+        return controls.concat(
+            collectFilterControls(props.children, column, [
+                ...nodePath,
+                'children',
+            ])
+        );
+    }
+
+    if (Array.isArray(node)) {
+        return node.flatMap((child, index) =>
+            collectFilterControls(child, column, [...nodePath, index])
+        );
+    }
+
+    return EMPTY_ARRAY;
+};
+
+const buildFilterDefinitions = (
+    columns,
+    defaultColumnProps,
+    locale,
+    renderOptions
+) =>
+    (columns || EMPTY_ARRAY).map((column) => {
+        const effectiveColumn = defaultColumnProps
+            ? { ...defaultColumnProps, ...column }
+            : column;
+        const filterTemplate = !isNil(column?.filter)
+            ? column.filter
+            : defaultColumnProps?.filter;
+
+        if (!column?.accessor || isNil(filterTemplate)) {
+            return {
+                accessor: column?.accessor,
+                column: effectiveColumn,
+                controls: EMPTY_ARRAY,
+            };
+        }
+
+        const resolvedFilter =
+            typeof filterTemplate === 'function'
+                ? undefined
+                : resolveStaticTemplateNode(
+                      filterTemplate,
+                      column,
+                      locale,
+                      renderOptions
+                  );
+
+        return {
+            accessor: column.accessor,
+            column: effectiveColumn,
+            controls: resolvedFilter
+                ? collectFilterControls(resolvedFilter, column)
+                : EMPTY_ARRAY,
+        };
+    });
+
+const getFilterDefinitionsKey = (definitions) =>
+    safeStringify(
+        (definitions || EMPTY_ARRAY).map((definition) => ({
+            accessor: definition.accessor,
+            controls: (definition.controls || EMPTY_ARRAY).map((control) => ({
+                defaultValue: getFilterDefaultValue(control),
+                key: control.key,
+                typeName: control.typeName,
+                valueProp: control.valueProp,
+            })),
+        }))
+    );
+
+const setFilterValueInCollection = (
+    filterValues,
+    accessor,
+    filterKey,
+    value,
+    inputCount
+) => {
+    const nextValues = isPlainObject(filterValues) ? { ...filterValues } : {};
+
+    if (inputCount <= 1) {
+        nextValues[accessor] = value;
+        return nextValues;
+    }
+
+    const currentColumnValue = isPlainObject(nextValues[accessor])
+        ? nextValues[accessor]
+        : {};
+
+    nextValues[accessor] = {
+        ...currentColumnValue,
+        [filterKey]: value,
+    };
+
+    return nextValues;
+};
+
+const getFilterValueFromCollection = (
+    filterValues,
+    accessor,
+    filterKey,
+    inputCount
+) => {
+    if (!isPlainObject(filterValues)) {
+        return { hasValue: false, value: undefined };
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(filterValues, accessor)) {
+        return { hasValue: false, value: undefined };
+    }
+
+    const columnValue = filterValues[accessor];
+
+    if (inputCount <= 1) {
+        if (
+            isPlainObject(columnValue) &&
+            Object.prototype.hasOwnProperty.call(columnValue, filterKey)
+        ) {
+            return { hasValue: true, value: columnValue[filterKey] };
+        }
+
+        return { hasValue: true, value: columnValue };
+    }
+
+    if (
+        isPlainObject(columnValue) &&
+        Object.prototype.hasOwnProperty.call(columnValue, filterKey)
+    ) {
+        return { hasValue: true, value: columnValue[filterKey] };
+    }
+
+    return { hasValue: false, value: undefined };
+};
+
+const buildInitialFilterValues = (definitions) =>
+    (definitions || EMPTY_ARRAY).reduce((filterValues, definition) => {
+        const controls = definition.controls || EMPTY_ARRAY;
+
+        controls.forEach((control) => {
+            const value = getFilterDefaultValue(control);
+
+            if (isNil(value)) {
+                return;
+            }
+
+            Object.assign(
+                filterValues,
+                setFilterValueInCollection(
+                    filterValues,
+                    definition.accessor,
+                    control.key,
+                    value,
+                    controls.length
+                )
+            );
+        });
+
+        return filterValues;
+    }, {});
+
+const syncFilterValuesWithDefinitions = (filterValues, definitions) => {
+    const nextValues = {};
+
+    (definitions || EMPTY_ARRAY).forEach((definition) => {
+        if (
+            definition.accessor &&
+            definition.controls?.length &&
+            Object.prototype.hasOwnProperty.call(filterValues, definition.accessor)
+        ) {
+            nextValues[definition.accessor] = filterValues[definition.accessor];
+        }
+    });
+
+    return nextValues;
+};
+
+const resolveFilterEmptyValue = (column, control) => {
+    const resolvedColumn = column || EMPTY_OBJECT;
+    const props = control.props || EMPTY_OBJECT;
+
+    if (Object.prototype.hasOwnProperty.call(resolvedColumn, 'filterEmptyValue')) {
+        return resolvedColumn.filterEmptyValue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(props, 'filterEmptyValue')) {
+        return props.filterEmptyValue;
+    }
+
+    if (
+        FILTER_RANGE_CONTROL_TYPES.has(control.typeName) &&
+        !isNil(props.min) &&
+        !isNil(props.max)
+    ) {
+        return [props.min, props.max];
+    }
+
+    return undefined;
+};
+
+const isFilterValueActive = (value, emptyValue) => {
+    if (!isNil(emptyValue) && areEditableValuesEqual(value, emptyValue)) {
+        return false;
+    }
+
+    if (isNil(value)) {
+        return false;
+    }
+
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const normalizedValue = value.trim();
+        return (
+            normalizedValue !== '' &&
+            !FILTER_INACTIVE_STRING_VALUES.has(normalizedValue.toLowerCase())
+        );
+    }
+
+    if (Array.isArray(value)) {
+        return value.some((item) => isFilterValueActive(item, undefined));
+    }
+
+    if (typeof value === 'object') {
+        return Object.values(value).some((item) =>
+            isFilterValueActive(item, undefined)
+        );
+    }
+
+    return true;
+};
+
+const getActiveColumnFilterEntries = (filterValues, definition) => {
+    const controls = definition?.controls || EMPTY_ARRAY;
+
+    return controls
+        .map((control) => {
+            const valueInfo = getFilterValueFromCollection(
+                filterValues,
+                definition.accessor,
+                control.key,
+                controls.length
+            );
+            const value = valueInfo.hasValue
+                ? valueInfo.value
+                : getFilterDefaultValue(control);
+            const emptyValue = resolveFilterEmptyValue(definition.column, control);
+
+            return {
+                ...control,
+                emptyValue,
+                value,
+            };
+        })
+        .filter((entry) => isFilterValueActive(entry.value, entry.emptyValue));
+};
+
+const isColumnFilterActive = (filterValues, definition) =>
+    getActiveColumnFilterEntries(filterValues, definition).length > 0;
+
+const isDateLikeString = (value) =>
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+
+const normalizeFilterComparableValue = (value) => {
+    if (value instanceof Date) {
+        return value.getTime();
+    }
+
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const normalizedValue = value.trim();
+        const numericValue = Number(normalizedValue);
+
+        if (normalizedValue !== '' && Number.isFinite(numericValue)) {
+            return numericValue;
+        }
+
+        if (isDateLikeString(normalizedValue)) {
+            const dateValue = Date.parse(normalizedValue);
+
+            if (Number.isFinite(dateValue)) {
+                return dateValue;
+            }
+        }
+
+        return normalizedValue.toLowerCase();
+    }
+
+    return value;
+};
+
+const filterValuesEqual = (left, right, caseSensitive = false) => {
+    if (Array.isArray(left)) {
+        return left.some((item) => filterValuesEqual(item, right, caseSensitive));
+    }
+
+    if (Array.isArray(right)) {
+        return right.some((item) => filterValuesEqual(left, item, caseSensitive));
+    }
+
+    const normalizedLeft = normalizeFilterComparableValue(left);
+    const normalizedRight = normalizeFilterComparableValue(right);
+
+    if (typeof normalizedLeft === 'string' || typeof normalizedRight === 'string') {
+        const leftText = isNil(normalizedLeft) ? '' : String(normalizedLeft);
+        const rightText = isNil(normalizedRight) ? '' : String(normalizedRight);
+
+        return caseSensitive
+            ? leftText === rightText
+            : leftText.toLowerCase() === rightText.toLowerCase();
+    }
+
+    return normalizedLeft === normalizedRight;
+};
+
+const compareFilterValues = (left, right) => {
+    const normalizedLeft = normalizeFilterComparableValue(left);
+    const normalizedRight = normalizeFilterComparableValue(right);
+
+    if (normalizedLeft < normalizedRight) {
+        return -1;
+    }
+
+    if (normalizedLeft > normalizedRight) {
+        return 1;
+    }
+
+    return 0;
+};
+
+const getFilterEntryText = (entry) =>
+    [
+        entry.key,
+        serializeComponentId(entry.props?.id),
+        entry.props?.label,
+        entry.props?.placeholder,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+const inferBoundOperator = (entry) => {
+    const entryText = getFilterEntryText(entry);
+
+    if (/(from|start|minimum|min|after|earliest|lower)/.test(entryText)) {
+        return 'gte';
+    }
+
+    if (/(to|end|maximum|max|before|latest|upper)/.test(entryText)) {
+        return 'lte';
+    }
+
+    return undefined;
+};
+
+const inferFilterOperator = (column, entry) => {
+    const configuredOperator =
+        column.filterOperator || column.filterMatchMode || entry.props?.filterOperator;
+
+    if (configuredOperator) {
+        return configuredOperator;
+    }
+
+    const boundOperator = inferBoundOperator(entry);
+
+    if (boundOperator) {
+        return boundOperator;
+    }
+
+    if (FILTER_RANGE_CONTROL_TYPES.has(entry.typeName)) {
+        return 'between';
+    }
+
+    if (
+        FILTER_DATE_CONTROL_TYPES.has(entry.typeName) &&
+        Array.isArray(entry.value)
+    ) {
+        return 'between';
+    }
+
+    if (FILTER_MULTI_CONTROL_TYPES.has(entry.typeName)) {
+        return 'in';
+    }
+
+    if (FILTER_TEXT_CONTROL_TYPES.has(entry.typeName)) {
+        return 'contains';
+    }
+
+    if (Array.isArray(entry.value)) {
+        return 'in';
+    }
+
+    return 'equals';
+};
+
+const matchesContainsFilter = (recordValue, filterValue, caseSensitive) => {
+    const haystack = toSearchableText(recordValue);
+    const needle = String(filterValue);
+
+    return caseSensitive
+        ? haystack.includes(needle)
+        : haystack.toLowerCase().includes(needle.toLowerCase());
+};
+
+const matchesInFilter = (recordValue, filterValue, caseSensitive) => {
+    const filterItems = Array.isArray(filterValue) ? filterValue : [filterValue];
+
+    if (Array.isArray(recordValue)) {
+        return recordValue.some((item) =>
+            filterItems.some((filterItem) =>
+                filterValuesEqual(item, filterItem, caseSensitive)
+            )
+        );
+    }
+
+    return filterItems.some((filterItem) =>
+        filterValuesEqual(recordValue, filterItem, caseSensitive)
+    );
+};
+
+const matchesBetweenFilter = (recordValue, lowerValue, upperValue) => {
+    if (isNil(recordValue)) {
+        return false;
+    }
+
+    if (isFilterValueActive(lowerValue, undefined)) {
+        if (compareFilterValues(recordValue, lowerValue) < 0) {
+            return false;
+        }
+    }
+
+    if (isFilterValueActive(upperValue, undefined)) {
+        if (compareFilterValues(recordValue, upperValue) > 0) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
+const matchesSingleColumnFilter = (recordValue, entry, column) => {
+    const operator = inferFilterOperator(column, entry);
+    const caseSensitive = Boolean(column.filterCaseSensitive);
+
+    if (typeof column.filterPredicate === 'function') {
+        return Boolean(
+            column.filterPredicate(recordValue, entry.value, {
+                column,
+                filter: entry,
+            })
+        );
+    }
+
+    if (operator === 'contains') {
+        return matchesContainsFilter(recordValue, entry.value, caseSensitive);
+    }
+
+    if (operator === 'startsWith') {
+        const haystack = toSearchableText(recordValue);
+        const needle = String(entry.value);
+        return caseSensitive
+            ? haystack.startsWith(needle)
+            : haystack.toLowerCase().startsWith(needle.toLowerCase());
+    }
+
+    if (operator === 'endsWith') {
+        const haystack = toSearchableText(recordValue);
+        const needle = String(entry.value);
+        return caseSensitive
+            ? haystack.endsWith(needle)
+            : haystack.toLowerCase().endsWith(needle.toLowerCase());
+    }
+
+    if (operator === 'in') {
+        return matchesInFilter(recordValue, entry.value, caseSensitive);
+    }
+
+    if (operator === 'between' || operator === 'range') {
+        const [lowerValue, upperValue] = Array.isArray(entry.value)
+            ? entry.value
+            : [undefined, entry.value];
+        return matchesBetweenFilter(recordValue, lowerValue, upperValue);
+    }
+
+    if (operator === 'gte') {
+        return compareFilterValues(recordValue, entry.value) >= 0;
+    }
+
+    if (operator === 'gt') {
+        return compareFilterValues(recordValue, entry.value) > 0;
+    }
+
+    if (operator === 'lte') {
+        return compareFilterValues(recordValue, entry.value) <= 0;
+    }
+
+    if (operator === 'lt') {
+        return compareFilterValues(recordValue, entry.value) < 0;
+    }
+
+    if (operator === 'notIn') {
+        return !matchesInFilter(recordValue, entry.value, caseSensitive);
+    }
+
+    return filterValuesEqual(recordValue, entry.value, caseSensitive);
+};
+
+const getRangeBoundsFromEntries = (entries) => {
+    let lowerValue;
+    let upperValue;
+
+    entries.forEach((entry) => {
+        const operator = inferBoundOperator(entry);
+
+        if (operator === 'lte') {
+            upperValue = entry.value;
+            return;
+        }
+
+        if (operator === 'gte') {
+            lowerValue = entry.value;
+            return;
+        }
+
+        if (isNil(lowerValue)) {
+            lowerValue = entry.value;
+        } else if (isNil(upperValue)) {
+            upperValue = entry.value;
+        }
+    });
+
+    return [lowerValue, upperValue];
+};
+
+const shouldUseRangeEntries = (column, entries) => {
+    if (entries.length < 2) {
+        return false;
+    }
+
+    if (['between', 'range'].includes(column.filterOperator || column.filterMatchMode)) {
+        return true;
+    }
+
+    if (entries.some((entry) => inferBoundOperator(entry))) {
+        return true;
+    }
+
+    return entries.every(
+        (entry) =>
+            FILTER_DATE_CONTROL_TYPES.has(entry.typeName) ||
+            entry.typeName === 'NumberInput'
+    );
+};
+
+const matchesColumnFilters = (record, filterValues, definition) => {
+    const activeEntries = getActiveColumnFilterEntries(filterValues, definition);
+
+    if (!activeEntries.length) {
+        return true;
+    }
+
+    const column = definition.column || EMPTY_OBJECT;
+    const accessor =
+        column.filterAccessor || column.filterValueAccessor || definition.accessor;
+    const recordValue = getAccessorValue(record, accessor);
+
+    if (shouldUseRangeEntries(column, activeEntries)) {
+        const [lowerValue, upperValue] = getRangeBoundsFromEntries(activeEntries);
+        return matchesBetweenFilter(recordValue, lowerValue, upperValue);
+    }
+
+    return activeEntries.every((entry) =>
+        matchesSingleColumnFilter(recordValue, entry, column)
+    );
+};
+
+const filterRecordsByColumnFilters = (records, filterValues, definitions) => {
+    const activeDefinitions = (definitions || EMPTY_ARRAY).filter((definition) =>
+        isColumnFilterActive(filterValues, definition)
+    );
+
+    if (!activeDefinitions.length) {
+        return records;
+    }
+
+    return records.filter((record) =>
+        activeDefinitions.every((definition) =>
+            matchesColumnFilters(record, filterValues, definition)
+        )
+    );
+};
+
+const enhanceFilterNode = (
+    filterNode,
+    column,
+    filterOptions = EMPTY_OBJECT,
+    nodePath = EMPTY_ARRAY
+) => {
+    if (React.isValidElement(filterNode)) {
+        const existingProps = filterNode.props || EMPTY_OBJECT;
+        const enhancedChildren = Object.prototype.hasOwnProperty.call(
+            existingProps,
+            'children'
+        )
+            ? enhanceFilterNode(
+                  existingProps.children,
+                  column,
+                  filterOptions,
+                  [...nodePath, 'children']
+              )
+            : undefined;
+        const controls =
+            filterOptions.filterDefinitionsByAccessor?.[column.accessor]?.controls ||
+            EMPTY_ARRAY;
+        const controlKey = getFilterControlKey(filterNode, column, nodePath);
+        const control = controls.find((item) => item.key === controlKey);
+        const nextProps = { ...existingProps };
+
+        if (Object.prototype.hasOwnProperty.call(existingProps, 'children')) {
+            nextProps.children = enhancedChildren;
+        }
+
+        if (!control) {
+            return React.cloneElement(filterNode, nextProps);
+        }
+
+        const valueInfo = getFilterValueFromCollection(
+            filterOptions.filterValues,
+            column.accessor,
+            control.key,
+            controls.length
+        );
+        const hasExistingValue = Object.prototype.hasOwnProperty.call(
+            existingProps,
+            control.valueProp
+        );
+
+        if (valueInfo.hasValue || hasExistingValue) {
+            nextProps[control.valueProp] = valueInfo.hasValue
+                ? valueInfo.value
+                : existingProps[control.valueProp];
+        }
+
+        nextProps.comboboxProps = mergeFilterNestedProps(
+            existingProps.comboboxProps,
+            { withinPortal: false }
+        );
+        nextProps.popoverProps = mergeFilterNestedProps(
+            existingProps.popoverProps,
+            { withinPortal: false }
+        );
+
+        const originalSetProps = existingProps.setProps;
+        const originalOnChange = existingProps.onChange;
+        const handleFilterChange = (nextValue) => {
+            if (typeof filterOptions.handleFilterValueChange === 'function') {
+                filterOptions.handleFilterValueChange(
+                    column,
+                    control,
+                    nextValue,
+                    controls.length
+                );
+            }
+        };
+
+        nextProps.setProps = (nextChildProps = EMPTY_OBJECT) => {
+            if (
+                nextChildProps &&
+                Object.prototype.hasOwnProperty.call(
+                    nextChildProps,
+                    control.valueProp
+                )
+            ) {
+                handleFilterChange(nextChildProps[control.valueProp]);
+            }
+
+            if (typeof originalSetProps === 'function') {
+                originalSetProps(nextChildProps);
+            }
+        };
+
+        if (
+            typeof originalOnChange === 'function' ||
+            (typeof originalSetProps !== 'function' &&
+                !isMaterializedDashComponent(filterNode))
+        ) {
+            nextProps.onChange = (nextValue, ...args) => {
+                handleFilterChange(
+                    extractEditorValue(nextValue, control.valueProp)
+                );
+
+                if (typeof originalOnChange === 'function') {
+                    originalOnChange(nextValue, ...args);
+                }
+            };
+        }
+
+        return React.cloneElement(filterNode, nextProps);
+    }
+
+    if (Array.isArray(filterNode)) {
+        return filterNode.map((child, index) =>
+            enhanceFilterNode(child, column, filterOptions, [...nodePath, index])
+        );
+    }
+
+    return filterNode;
 };
 
 const EditableCellPopover = ({
@@ -1189,7 +2100,7 @@ const resolveDashComponentType = (node) => {
         return String(type).toLowerCase();
     }
 
-    return window?.[namespace]?.[type] || null;
+    return trackDashComponentType(window?.[namespace]?.[type] || null, type);
 };
 
 const normalizeTemplateAction = (value) => {
@@ -1288,8 +2199,13 @@ const materializeDashComponent = (
         },
         {}
     );
+    const componentProps =
+        typeof componentType === 'string' ||
+        typeof nextProps.setProps === 'function'
+            ? nextProps
+            : { ...nextProps, setProps: NOOP_SET_PROPS };
     const resolvedProps = withTemplateClickHandler(
-        nextProps,
+        componentProps,
         context,
         renderOptions
     );
@@ -2178,66 +3094,84 @@ const buildColumn = (
     locale,
     defaultColumnRender,
     renderOptions,
-    editingOptions = EMPTY_OBJECT
-) => ({
-    accessor: column.accessor,
-    title: column.title,
-    textAlign: column.textAlign,
-    sortable: column.sortable,
-    sortKey: column.sortKey,
-    draggable: column.draggable,
-    toggleable: column.toggleable,
-    resizable: column.resizable,
-    defaultToggle: column.defaultToggle,
-    filter:
+    editingOptions = EMPTY_OBJECT,
+    filterOptions = EMPTY_OBJECT
+) => {
+    const resolvedFilter =
         typeof column.filter === 'function'
-            ? column.filter
+            ? (params) =>
+                  enhanceFilterNode(
+                      column.filter(params),
+                      column,
+                      filterOptions
+                  )
             : isNil(column.filter)
               ? column.filter
-              : resolveStaticTemplateNode(
-                    column.filter,
+              : enhanceFilterNode(
+                    resolveStaticTemplateNode(
+                        column.filter,
+                        column,
+                        locale,
+                        renderOptions
+                    ),
                     column,
-                    locale,
-                    renderOptions
-                ),
-    filtering: column.filtering,
-    filterPopoverProps: column.filterPopoverProps,
-    filterPopoverDisableClickOutside:
-        column.filterPopoverDisableClickOutside,
-    width: column.width,
-    hidden: column.hidden,
-    hiddenContent: column.hiddenContent,
-    visibleMediaQuery: column.visibleMediaQuery,
-    titleClassName: column.titleClassName,
-    titleStyle: column.titleStyle,
-    cellsClassName: clsx(column.cellsClassName),
-    cellsStyle:
-        typeof column.cellsStyle === 'function'
-            ? column.cellsStyle
-            : column.cellsStyle
-              ? () => column.cellsStyle
-              : undefined,
-    customCellAttributes: buildRowValueResolver(
-        !isNil(column.cellAttributes)
-            ? column.cellAttributes
-            : column.customCellAttributes,
-        'attributes',
-        renderOptions.idAccessor,
-        { merge: true }
-    ),
-    footer: isNil(column.footer)
-        ? column.footer
-        : resolveStaticTemplateNode(
-              column.footer,
-              column,
-              locale,
-              renderOptions
-          ),
-    footerClassName: column.footerClassName,
-    footerStyle: column.footerStyle,
-    ellipsis: column.ellipsis,
-    noWrap: column.noWrap,
-    render: (record, index) => {
+                    filterOptions
+                );
+    const resolvedFiltering = !isNil(column.filtering)
+        ? column.filtering
+        : typeof filterOptions.isColumnFilterActive === 'function'
+          ? filterOptions.isColumnFilterActive(column)
+          : column.filtering;
+
+    return {
+        accessor: column.accessor,
+        title: column.title,
+        textAlign: column.textAlign,
+        sortable: column.sortable,
+        sortKey: column.sortKey,
+        draggable: column.draggable,
+        toggleable: column.toggleable,
+        resizable: column.resizable,
+        defaultToggle: column.defaultToggle,
+        filter: resolvedFilter,
+        filtering: resolvedFiltering,
+        filterPopoverProps: column.filterPopoverProps,
+        filterPopoverDisableClickOutside:
+            column.filterPopoverDisableClickOutside,
+        width: column.width,
+        hidden: column.hidden,
+        hiddenContent: column.hiddenContent,
+        visibleMediaQuery: column.visibleMediaQuery,
+        titleClassName: column.titleClassName,
+        titleStyle: column.titleStyle,
+        cellsClassName: clsx(column.cellsClassName),
+        cellsStyle:
+            typeof column.cellsStyle === 'function'
+                ? column.cellsStyle
+                : column.cellsStyle
+                  ? () => column.cellsStyle
+                  : undefined,
+        customCellAttributes: buildRowValueResolver(
+            !isNil(column.cellAttributes)
+                ? column.cellAttributes
+                : column.customCellAttributes,
+            'attributes',
+            renderOptions.idAccessor,
+            { merge: true }
+        ),
+        footer: isNil(column.footer)
+            ? column.footer
+            : resolveStaticTemplateNode(
+                  column.footer,
+                  column,
+                  locale,
+                  renderOptions
+              ),
+        footerClassName: column.footerClassName,
+        footerStyle: column.footerStyle,
+        ellipsis: column.ellipsis,
+        noWrap: column.noWrap,
+        render: (record, index) => {
         const rawValue = getAccessorValue(record, column.accessor);
         const formattedValue = buildDisplayValue(record, column, locale);
         const presentation = column.presentation || column.type || 'text';
@@ -2360,14 +3294,16 @@ const buildColumn = (
             />
         );
     },
-});
+    };
+};
 
 const buildGroup = (
     group,
     locale,
     defaultColumnRender,
     renderOptions,
-    editingOptions = EMPTY_OBJECT
+    editingOptions = EMPTY_OBJECT,
+    filterOptions = EMPTY_OBJECT
 ) => ({
     id: group.id,
     title: group.title,
@@ -2381,7 +3317,8 @@ const buildGroup = (
                   locale,
                   defaultColumnRender,
                   renderOptions,
-                  editingOptions
+                  editingOptions,
+                  filterOptions
               )
           )
         : undefined,
@@ -2392,7 +3329,8 @@ const buildGroup = (
                   locale,
                   defaultColumnRender,
                   renderOptions,
-                  editingOptions
+                  editingOptions,
+                  filterOptions
               )
           )
         : undefined,
@@ -2410,6 +3348,7 @@ const DataTable = ({
     paginationMode = 'client',
     sortMode = 'client',
     searchMode = 'client',
+    filterMode = 'client',
     recordsPerPage = 10,
     pageSize = 10,
     noRecordsText = 'No records found',
@@ -2435,6 +3374,7 @@ const DataTable = ({
         records,
         searchQuery,
         searchableAccessors,
+        filterValues,
         page,
         totalRecords,
         sortStatus,
@@ -2575,17 +3515,139 @@ const DataTable = ({
     const resolvedColumns = Array.isArray(effectiveColumns)
         ? effectiveColumns
         : sourceColumns;
+    const resolvedFilterColumns =
+        props.defaultColumnProps && !isNil(props.defaultColumnProps.filter)
+            ? resolvedColumns.map((column) =>
+                  isNil(column.filter)
+                      ? {
+                            ...column,
+                            filter: props.defaultColumnProps.filter,
+                            filterPopoverProps:
+                                column.filterPopoverProps ??
+                                props.defaultColumnProps.filterPopoverProps,
+                            filterPopoverDisableClickOutside:
+                                column.filterPopoverDisableClickOutside ??
+                                props.defaultColumnProps
+                                    .filterPopoverDisableClickOutside,
+                        }
+                      : column
+              )
+            : resolvedColumns;
     const resolvedSearchableAccessors = Array.isArray(searchableAccessors)
         ? searchableAccessors
         : resolvedColumns
               .filter((column) => column.searchable !== false)
               .map((column) => column.accessor)
               .filter(Boolean);
+    const templateRenderOptions = {
+        idAccessor,
+    };
+    const columnFilterDefinitions = buildFilterDefinitions(
+        resolvedFilterColumns,
+        props.defaultColumnProps,
+        locale,
+        templateRenderOptions
+    );
+    const filterDefinitionsKey = getFilterDefinitionsKey(
+        columnFilterDefinitions
+    );
+    const initialFilterValues = buildInitialFilterValues(
+        columnFilterDefinitions
+    );
+    const [internalFilterValues, setInternalFilterValues] =
+        useState(initialFilterValues);
+    const filterValuesControlledRef = useRef(isPlainObject(filterValues));
+    const filterValuesControlled = filterValuesControlledRef.current;
 
-    const clientFilteredRecords =
+    useEffect(() => {
+        if (filterValuesControlled) {
+            return;
+        }
+
+        setInternalFilterValues((currentValues) =>
+            syncFilterValuesWithDefinitions(
+                { ...initialFilterValues, ...currentValues },
+                columnFilterDefinitions
+            )
+        );
+    }, [filterDefinitionsKey, filterValuesControlled]);
+
+    const currentFilterValues = filterValuesControlled
+        ? filterValues
+        : internalFilterValues;
+    const filterDefinitionsByAccessor = columnFilterDefinitions.reduce(
+        (accumulator, definition) => {
+            if (definition.accessor) {
+                accumulator[definition.accessor] = definition;
+            }
+
+            return accumulator;
+        },
+        {}
+    );
+
+    const updateProps = (nextProps) => {
+        if (setProps) {
+            setProps(nextProps);
+        }
+    };
+
+    const handleFilterValueChange = (
+        column,
+        control,
+        nextValue,
+        inputCount
+    ) => {
+        if (!column?.accessor || !control?.key) {
+            return;
+        }
+
+        const nextFilterValues = setFilterValueInCollection(
+            currentFilterValues,
+            column.accessor,
+            control.key,
+            nextValue,
+            inputCount || 1
+        );
+        const shouldResetPage = currentPage !== 1;
+
+        if (!filterValuesControlled) {
+            setInternalFilterValues(nextFilterValues);
+        }
+
+        if (shouldResetPage && isNil(page)) {
+            setInternalPage(1);
+        }
+
+        updateProps({
+            filterValues: nextFilterValues,
+            lastFilterChange: {
+                columnAccessor: column.accessor,
+                filterKey: control.key,
+                value: nextValue,
+                columnFilterValue: nextFilterValues[column.accessor],
+                active: isColumnFilterActive(
+                    nextFilterValues,
+                    filterDefinitionsByAccessor[column.accessor]
+                ),
+                timestamp: Date.now(),
+            },
+            ...(shouldResetPage ? { page: 1 } : EMPTY_OBJECT),
+        });
+    };
+
+    const clientSearchFilteredRecords =
         searchMode === 'client'
             ? filterRecords(allRecords, deferredSearchQuery, resolvedSearchableAccessors)
             : allRecords;
+    const clientFilteredRecords =
+        filterMode === 'client'
+            ? filterRecordsByColumnFilters(
+                  clientSearchFilteredRecords,
+                  currentFilterValues,
+                  columnFilterDefinitions
+              )
+            : clientSearchFilteredRecords;
     const clientSortedRecords =
         sortMode === 'client'
             ? sortRecords(clientFilteredRecords, currentSortStatus)
@@ -2652,16 +3714,7 @@ const DataTable = ({
         idAccessor,
         { merge: true }
     );
-    const templateRenderOptions = {
-        idAccessor,
-    };
     const rowDraggingEnabled = Boolean(rowDragging) && !hasInlineHierarchy;
-
-    const updateProps = (nextProps) => {
-        if (setProps) {
-            setProps(nextProps);
-        }
-    };
 
     const clearRowDraggingState = () => {
         rowDragSourceIdRef.current = null;
@@ -3070,7 +4123,18 @@ const DataTable = ({
         }
     }
 
-    const builtColumns = resolvedColumns.map((column) =>
+    const filterOptions = {
+        filterDefinitionsByAccessor,
+        filterValues: currentFilterValues,
+        handleFilterValueChange,
+        isColumnFilterActive: (column) =>
+            isColumnFilterActive(
+                currentFilterValues,
+                filterDefinitionsByAccessor[column.accessor]
+            ),
+    };
+
+    const builtColumns = resolvedFilterColumns.map((column) =>
         buildColumn(
             column,
             locale,
@@ -3080,7 +4144,8 @@ const DataTable = ({
                 closeEditor: closeEditableCell,
                 handleValueChange: handleEditableCellValueChange,
                 isEditingCell,
-            }
+            },
+            filterOptions
         )
     );
     const builtGroupedColumns =
@@ -3113,7 +4178,7 @@ const DataTable = ({
               })
             : builtColumns;
     const resolvedGroups = hasGroups
-        ? syncGroupsWithEffectiveColumns(groups, resolvedColumns)
+        ? syncGroupsWithEffectiveColumns(groups, resolvedFilterColumns)
         : undefined;
     const builtGroups = hasGroups
         ? resolvedGroups.map((group) =>
@@ -3126,7 +4191,8 @@ const DataTable = ({
                       closeEditor: closeEditableCell,
                       handleValueChange: handleEditableCellValueChange,
                       isEditingCell,
-                  }
+                  },
+                  filterOptions
               )
           )
         : undefined;
@@ -3565,8 +4631,10 @@ DataTable.propTypes = {
     paginationMode: PropTypes.oneOf(['client', 'server', 'none']),
     sortMode: PropTypes.oneOf(['client', 'server']),
     searchMode: PropTypes.oneOf(['client', 'server']),
+    filterMode: PropTypes.oneOf(['client', 'server', 'none']),
     searchQuery: PropTypes.string,
     searchableAccessors: PropTypes.arrayOf(PropTypes.string),
+    filterValues: PropTypes.object,
     page: PropTypes.number,
     recordsPerPage: PropTypes.number,
     pageSize: PropTypes.number,
@@ -3648,6 +4716,7 @@ DataTable.propTypes = {
     lastSortChange: PropTypes.object,
     lastSelectionChange: PropTypes.object,
     lastExpansionChange: PropTypes.object,
+    lastFilterChange: PropTypes.object,
     emptyState: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     noRecordsIcon: PropTypes.any,
     noRecordsText: PropTypes.string,

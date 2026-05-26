@@ -201,10 +201,15 @@ def test_update_columns_supports_dmc_filter_components():
                 label="Default filter",
             )
         )
+    ).update_filters(
+        filter_mode="server",
+        filter_values={"name": "Avery"},
     )
 
     props = table.to_plotly_json()["props"]
 
+    assert props["filterMode"] == "server"
+    assert props["filterValues"] == {"name": "Avery"}
     assert props["columns"][0]["filtering"] is True
     assert props["columns"][0]["filterPopoverProps"] == {"width": 280}
     assert props["columns"][0]["filter"].to_plotly_json()["props"]["id"] == "name-filter"
@@ -213,8 +218,8 @@ def test_update_columns_supports_dmc_filter_components():
         props["defaultColumnProps"]["filter"].to_plotly_json()["props"]["id"]
         == "default-filter"
     )
-    assert "columns[].filter" in dmdt.DataTable._children_props
-    assert "defaultColumnProps.filter" in dmdt.DataTable._children_props
+    assert "columns[].filter" not in dmdt.DataTable._children_props
+    assert "defaultColumnProps.filter" not in dmdt.DataTable._children_props
 
 
 def test_group_columns_builds_groups_from_existing_columns():
