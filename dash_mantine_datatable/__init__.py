@@ -72,6 +72,8 @@ _PROP_ALIASES = {
     "default_column_render": "defaultColumnRender",
     "dir": "direction",
     "disabled_selection_row_rules": "disabledSelectionRowRules",
+    "filter_mode": "filterMode",
+    "filter_values": "filterValues",
     "fontSize": "fz",
     "group_aggregations": "groupAggregations",
     "group_by": "groupBy",
@@ -97,12 +99,10 @@ _EXTRA_BASE_NODES = (
 _EXTRA_CHILDREN_PROPS = (
     "columns[].render",
     "columns[].editor",
-    "columns[].filter",
     "columns[].footer",
     "customLoader",
     "defaultColumnProps.render",
     "defaultColumnProps.editor",
-    "defaultColumnProps.filter",
     "defaultColumnProps.footer",
     "defaultColumnRender",
     "emptyState",
@@ -1733,6 +1733,43 @@ class DataTable(_GeneratedDataTable):
         """
         return self._update_props(**kwargs)
 
+    def update_filters(self, **kwargs: Any) -> "DataTable":
+        """
+        Description
+        -----------
+        Update column-filter state and mode in place.
+
+        Parameters
+        ----------
+        filterMode : str, optional
+            Description: Chooses where column filter values are applied.
+            Expected inputs: `'client'`, `'server'`, `'none'`.
+            Example: `filterMode="client"`.
+        filterValues : dict, optional
+            Description: Controlled mapping of column accessors to filter
+            values. The table also writes this prop when filter components
+            change.
+            Example: `filterValues={"name": "avery", "team": ["Platform"]}`.
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        Client mode is the default: DMC filter components rendered in column
+        popovers are wired internally and combined with search, sorting, and
+        pagination. In server mode, the table still reports `filterValues` and
+        `lastFilterChange` so a Dash callback can fetch data.
+
+        Examples
+        --------
+        >>> table.update_filters(filterMode="server")
+        DataTable(...)
+        """
+        return self._update_props(**kwargs)
+
     def clear_selection(self) -> "DataTable":
         """
         Description
@@ -2068,6 +2105,15 @@ _set_doc_signature(
         _doc_parameter("searchQuery", default=None),
         _doc_parameter("searchMode", default=None),
         _doc_parameter("searchableAccessors", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_filters,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("filterMode", default=None),
+        _doc_parameter("filterValues", default=None),
     ],
 )
 
