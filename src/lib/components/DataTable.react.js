@@ -473,6 +473,18 @@ const FILTER_CONTROL_TYPES = new Set([
 
 const FILTER_INACTIVE_STRING_VALUES = new Set(['all', '__all__']);
 
+const FILTER_OVERLAY_CONTROL_TYPES = new Set([
+    ...FILTER_MULTI_CONTROL_TYPES,
+    ...FILTER_DATE_CONTROL_TYPES,
+    'Autocomplete',
+    'Select',
+]);
+
+const filterDefinitionNeedsClickOutsideDisabled = (definition) =>
+    (definition?.controls || EMPTY_ARRAY).some((control) =>
+        FILTER_OVERLAY_CONTROL_TYPES.has(control.typeName)
+    );
+
 const mergeEditorNestedProps = (value, overrides) =>
     value && typeof value === 'object' && !Array.isArray(value)
         ? { ...value, ...overrides }
@@ -499,18 +511,33 @@ const enhanceEditorNode = (
     const existingProps = editorNode.props || EMPTY_OBJECT;
     const originalOnChange = existingProps.onChange;
     const originalOnKeyDown = existingProps.onKeyDown;
+    const originalSetProps = existingProps.setProps;
+    // Keep combobox/date dropdowns inside the editable popover so outside-click
+    // dismissal does not fire before MultiSelect/Select/DateInput can commit.
     const nextProps = {
         ...existingProps,
         [valueProp]: value,
         autoFocus: false,
         comboboxProps: mergeEditorNestedProps(existingProps.comboboxProps, {
-            withinPortal: true,
+            withinPortal: false,
             zIndex: 1100,
         }),
         popoverProps: mergeEditorNestedProps(existingProps.popoverProps, {
-            withinPortal: true,
+            withinPortal: false,
             zIndex: 1100,
         }),
+        setProps: (nextChildProps = EMPTY_OBJECT) => {
+            if (
+                nextChildProps &&
+                Object.prototype.hasOwnProperty.call(nextChildProps, valueProp)
+            ) {
+                handleValueChange(nextChildProps[valueProp]);
+            }
+
+            if (typeof originalSetProps === 'function') {
+                originalSetProps(nextChildProps);
+            }
+        },
         onChange: (nextValue, ...args) => {
             handleValueChange(extractEditorValue(nextValue, valueProp));
 
@@ -1319,6 +1346,8 @@ const enhanceFilterNode = (
             }
         };
 
+        // DMC controls primarily sync through setProps; also keep onChange for
+        // Mantine-native / non-Dash filter nodes and dual-wired components.
         nextProps.setProps = (nextChildProps = EMPTY_OBJECT) => {
             if (
                 nextChildProps &&
@@ -1335,21 +1364,15 @@ const enhanceFilterNode = (
             }
         };
 
-        if (
-            typeof originalOnChange === 'function' ||
-            (typeof originalSetProps !== 'function' &&
-                !isMaterializedDashComponent(filterNode))
-        ) {
-            nextProps.onChange = (nextValue, ...args) => {
-                handleFilterChange(
-                    extractEditorValue(nextValue, control.valueProp)
-                );
+        nextProps.onChange = (nextValue, ...args) => {
+            handleFilterChange(
+                extractEditorValue(nextValue, control.valueProp)
+            );
 
-                if (typeof originalOnChange === 'function') {
-                    originalOnChange(nextValue, ...args);
-                }
-            };
-        }
+            if (typeof originalOnChange === 'function') {
+                originalOnChange(nextValue, ...args);
+            }
+        };
 
         return React.cloneElement(filterNode, nextProps);
     }
@@ -1949,12 +1972,18 @@ const wrapGroupedCellContent = (
     content,
     record,
     expandedRecordIds,
-    groupLevel = 0
+    groupLevel = 0,
+    idAccessor = 'id'
 ) => {
-    const isGroupRecord = Boolean(record?.__group);
-    const isExpanded = isGroupRecord
-        ? expandedRecordIds.includes(record.__groupId)
-        : false;
+    const isHierarchyParent = isInlineHierarchyParentRecord(record);
+    const recordId = isHierarchyParent
+        ? getRecordId(record, idAccessor)
+        : undefined;
+    const isExpanded =
+        isHierarchyParent &&
+        !isNil(recordId) &&
+        Array.isArray(expandedRecordIds) &&
+        expandedRecordIds.includes(recordId);
 
     return (
         <Box
@@ -1968,7 +1997,7 @@ const wrapGroupedCellContent = (
                 aria-hidden="true"
                 className={clsx(
                     'dash-mantine-datatable-group-chevron',
-                    isGroupRecord
+                    isHierarchyParent
                         ? 'dash-mantine-datatable-group-chevron-visible'
                         : 'dash-mantine-datatable-group-chevron-spacer',
                     isExpanded &&
@@ -2444,6 +2473,32 @@ const formatPrimitiveValue = (value, column, locale) => {
         const trueLabel = column.trueLabel || 'Yes';
         const falseLabel = column.falseLabel || 'No';
         return value ? trueLabel : falseLabel;
+    }
+
+    if (Array.isArray(value)) {
+        if (!value.length) {
+            return column.emptyValue || '';
+        }
+
+        return value
+            .map((item) => {
+                if (isNil(item)) {
+                    return '';
+                }
+
+                if (typeof item === 'object') {
+                    return (
+                        item.label ||
+                        item.value ||
+                        item.name ||
+                        safeStringify(item)
+                    );
+                }
+
+                return String(item);
+            })
+            .filter(Boolean)
+            .join(', ');
     }
 
     if (typeof value === 'object') {
@@ -3177,7 +3232,11 @@ const buildColumn = (
         filtering: resolvedFiltering,
         filterPopoverProps: column.filterPopoverProps,
         filterPopoverDisableClickOutside:
-            column.filterPopoverDisableClickOutside,
+            column.filterPopoverDisableClickOutside ??
+            (typeof filterOptions.shouldDisableFilterPopoverClickOutside ===
+            'function'
+                ? filterOptions.shouldDisableFilterPopoverClickOutside(column)
+                : undefined),
         width: column.width,
         hidden: column.hidden,
         hiddenContent: column.hiddenContent,
@@ -4172,6 +4231,10 @@ const DataTable = ({
                 currentFilterValues,
                 filterDefinitionsByAccessor[column.accessor]
             ),
+        shouldDisableFilterPopoverClickOutside: (column) =>
+            filterDefinitionNeedsClickOutsideDisabled(
+                filterDefinitionsByAccessor[column.accessor]
+            ),
     };
 
     const builtColumns = resolvedFilterColumns.map((column) =>
@@ -4211,7 +4274,8 @@ const DataTable = ({
                               resolvedContent,
                               record,
                               currentExpandedIds,
-                              record?.__groupLevel ?? __groupLevel
+                              record?.__groupLevel ?? __groupLevel,
+                              idAccessor
                           );
                       },
                   };
@@ -4341,10 +4405,19 @@ const DataTable = ({
     };
     // Apply minHeight on the outer wrapper so Mantine DataTable does not
     // stretch body rows to fill leftover vertical space (see issue #8).
+    // When the table is empty/loading, also pass mih into the table so the
+    // absolutely-positioned empty/loader overlay has a real viewport to center in.
     const wrapperMinHeight = resolvedRootProps.mih;
     const tableRootProps = { ...resolvedRootProps };
     delete tableRootProps.mih;
     delete tableRootProps.minHeight;
+    const showEmptyOrLoadingOverlay =
+        Boolean(props.fetching) ||
+        !Array.isArray(displayedRecords) ||
+        displayedRecords.length === 0;
+    const tableMinHeight = showEmptyOrLoadingOverlay
+        ? wrapperMinHeight
+        : undefined;
     const resolvedTableProps =
         hasInlineHierarchy || isGroupedChildTable
             ? {
@@ -4440,8 +4513,8 @@ const DataTable = ({
                             'dash-mantine-datatable-grouped',
                         isGroupedChildTable &&
                             'dash-mantine-datatable-grouped-child',
-                        props.striped && 'dash-mantine-datatable-striped',
-                        props.highlightOnHover &&
+                        striped && 'dash-mantine-datatable-striped',
+                        highlightOnHover &&
                             'dash-mantine-datatable-highlight-on-hover'
                     )}
                     classNames={props.classNames}
@@ -4453,7 +4526,7 @@ const DataTable = ({
                     fetching={props.fetching}
                     groups={builtGroups}
                     height={resolvedRootProps.h}
-                    highlightOnHover={props.highlightOnHover}
+                    highlightOnHover={highlightOnHover}
                     highlightOnHoverColor={props.highlightOnHoverColor}
                     idAccessor={resolvedMantineIdAccessor}
                     isRecordSelectable={isRecordSelectable}
@@ -4466,6 +4539,7 @@ const DataTable = ({
                     loaderSize={props.loaderSize}
                     loaderType={props.loaderType}
                     maxHeight={resolvedRootProps.mah}
+                    mih={tableMinHeight}
                     noHeader={props.noHeader}
                     noRecordsIcon={resolvedNoRecordsIcon}
                     noRecordsText={noRecordsText}
@@ -4586,12 +4660,12 @@ const DataTable = ({
                     storeColumnsKey={props.storeColumnsKey}
                     stickyHeader={props.stickyHeader}
                     stickyHeaderOffset={props.stickyHeaderOffset}
-                    striped={props.striped}
+                    striped={striped}
                     stripedColor={props.stripedColor}
                     style={props.style}
                     styles={props.styles}
                     tableRef={props.tableRef}
-                    textSelectionDisabled={props.textSelectionDisabled}
+                    textSelectionDisabled={textSelectionDisabled}
                     totalRecords={
                         paginationMode === 'none'
                             ? undefined
@@ -4599,9 +4673,9 @@ const DataTable = ({
                     }
                     verticalSpacing={props.verticalSpacing}
                     verticalAlign={props.verticalAlign}
-                    withRowBorders={props.withRowBorders}
-                    withColumnBorders={props.withColumnBorders}
-                    withTableBorder={props.withTableBorder}
+                    withRowBorders={withRowBorders}
+                    withColumnBorders={withColumnBorders}
+                    withTableBorder={withTableBorder}
                 />
             </Box>
         </DirectionProvider>

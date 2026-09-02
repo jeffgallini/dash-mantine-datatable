@@ -9,6 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 package_name = package["name"].replace(" ", "_").replace("-", "_")
 repository_url = "https://github.com/jeffgallini/dash-mantine-datatable"
+docs_url = "https://jeffgallini.github.io/dash-mantine-datatable/"
 
 setup(
     name=package["name"],
@@ -23,7 +24,8 @@ setup(
     long_description_content_type="text/markdown",
     url=repository_url,
     project_urls={
-        "Homepage": repository_url,
+        "Homepage": docs_url,
+        "Documentation": docs_url,
         "Source": repository_url,
         "Tracker": f"{repository_url}/issues",
     },
@@ -38,6 +40,7 @@ setup(
         ],
         "docs": [
             "pdoc>=16,<17",
+            "playwright>=1.49,<2",
         ],
     },
     classifiers=[

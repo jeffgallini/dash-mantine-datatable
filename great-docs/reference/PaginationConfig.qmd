@@ -1,0 +1,116 @@
+---
+title: "[PaginationConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [PaginationConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}
+
+::: {.doc-subject}
+
+:::
+
+::: {.doc-usage-source}
+Usage
+
+[Source](https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\__init__.py#L490-L555){target="_blank" rel="noopener"}
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```python
+PaginationConfig(**kwargs)
+```
+:::
+
+## Description {.doc-description}
+
+Build a compact pagination configuration dictionary for client-side or
+server-side paging.
+
+## Parameters {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[page]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [int | float]{.doc-parameter-annotation}</code>
+
+:   Description: Current page number in controlled pagination mode.
+    Example: `page=1`.
+
+<code>[pageSize]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [int | float]{.doc-parameter-annotation}</code>
+
+:   Description: Number of rows shown per page when using the `pageSize`
+    prop.
+    Example: `pageSize=25`.
+
+<code>[recordsPerPage]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [int | float]{.doc-parameter-annotation}</code>
+
+:   Description: Preferred page-size prop matching Mantine DataTable's API.
+    Example: `recordsPerPage=25`.
+
+<code>[totalRecords]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [int | float]{.doc-parameter-annotation}</code>
+
+:   Description: Total number of records available, typically required for
+    server-side pagination.
+    Example: `totalRecords=248`.
+
+<code>[recordsPerPageOptions]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[int | float]]{.doc-parameter-annotation}</code>
+
+:   Description: Page-size choices shown in the footer control.
+    Example: `recordsPerPageOptions=[10, 25, 50, 100]`.
+
+<code>[pageSizeOptions]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[int | float]]{.doc-parameter-annotation}</code>
+
+:   Description: Alternative page-size options prop.
+    Example: `pageSizeOptions=[10, 25, 50]`.
+
+<code>[recordsPerPageLabel]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Label shown next to the page-size selector.
+    Example: `recordsPerPageLabel="Rows"`.
+
+<code>[paginationSize]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str | int | float]{.doc-parameter-annotation}</code>
+
+:   Description: Visual size of the pagination controls.
+    Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`, `'md'`,
+    `'lg'`, `'xl'`, or a numeric size when supported.
+    Example: `paginationSize="sm"`.
+
+<code>[paginationActiveTextColor]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str | dict]{.doc-parameter-annotation}</code>
+
+:   Description: Text color for the active page button.
+    Example: `paginationActiveTextColor="white"`.
+
+<code>[paginationActiveBackgroundColor]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str | dict]{.doc-parameter-annotation}</code>
+
+:   Description: Background color for the active page button.
+    Example: `paginationActiveBackgroundColor="blue.6"`.
+
+<code>[paginationWithEdges]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Shows first/last page controls when `True`.
+    Example: `paginationWithEdges=True`.
+
+<code>[paginationWithControls]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Shows previous/next controls when `True`.
+    Example: `paginationWithControls=True`.
+:::
+
+## Returns {.doc-returns}
+
+::: {.doc-definition-items}
+<code> [dict]{.doc-parameter-annotation}</code>
+
+:   A dictionary with `None` values removed.
+:::
+
+## Notes {.doc-notes}
+
+For most apps you will set either `recordsPerPage` or `pageSize`, not
+both. This helper simply forwards whatever keys you provide.
+
+## Examples {.doc-examples}
+
+```python
+>>> PaginationConfig(page=2, recordsPerPage=25, totalRecords=240)
+{'page': 2, 'recordsPerPage': 25, 'totalRecords': 240}
+```

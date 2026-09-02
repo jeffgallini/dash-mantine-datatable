@@ -1,0 +1,69 @@
+---
+title: "[RowExpansionConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [RowExpansionConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}
+
+::: {.doc-subject}
+
+:::
+
+::: {.doc-usage-source}
+Usage
+
+[Source](https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\__init__.py#L558-L597){target="_blank" rel="noopener"}
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```python
+RowExpansionConfig(content=None, /, **kwargs)
+```
+:::
+
+## Description {.doc-description}
+
+Build a row-expansion configuration dictionary for detail panels shown
+beneath a record.
+
+## Parameters {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[content]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [Any]{.doc-parameter-annotation} [=]{.doc-parameter-default-sep .op} [None]{.doc-parameter-default}</code>
+
+:   Description: Dash component or payload rendered when a row is expanded.
+    Example: `content=dmc.Text("Employee details")`.
+
+<code>[allowMultiple]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Allows multiple rows to stay expanded at the same time.
+    Example: `allowMultiple=True`.
+
+<code>[trigger]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Chooses how expansion is toggled.
+    Expected inputs: frontend-supported trigger values such as `'click'`
+    when available.
+    Example: `trigger="click"`.
+:::
+
+## Returns {.doc-returns}
+
+::: {.doc-definition-items}
+<code> [dict]{.doc-parameter-annotation}</code>
+
+:   A dictionary with `None` values removed.
+:::
+
+## Notes {.doc-notes}
+
+This helper is especially useful when you want to keep expansion config in
+one place and reuse it across multiple table instances.
+
+## Examples {.doc-examples}
+
+```python
+>>> RowExpansionConfig(content="More details", allowMultiple=True)
+{'allowMultiple': True, 'content': 'More details'}
+```

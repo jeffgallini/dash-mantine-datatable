@@ -1,0 +1,10 @@
+{
+  "Column": "function",
+  "ColumnGroup": "function",
+  "DataTable.ComponentSingleType": "constant",
+  "DataTable.ComponentType": "constant",
+  "DataTable.NumberType": "constant",
+  "PaginationConfig": "function",
+  "RowExpansionConfig": "function",
+  "SelectionConfig": "function"
+}
