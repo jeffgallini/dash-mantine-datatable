@@ -19,6 +19,9 @@ node_modules/
 pytest-cache-files-*/
 pytest-tmp/
 site/
+great-docs/_site/
+great-docs/.quarto/
+great-docs/**/*.quarto_ipynb
 venv/
 *.egg-info/
 *.log

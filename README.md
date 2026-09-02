@@ -1,10 +1,15 @@
 # dash-mantine-datatable
- 
-`dash-mantine-datatable` is a Dash wrapper around Mantine DataTable for apps
-that already use `dash-mantine-components` and want a table that feels native
-to the Mantine stack. It adds a Dash-friendly prop model, Mantine style props,
-Dash-safe render and editor slots, and chainable Python helpers for columns,
-grouping, rows, selection, pagination, sorting, and search.
+
+[![PyPI version](https://img.shields.io/pypi/v/dash-mantine-datatable.svg)](https://pypi.org/project/dash-mantine-datatable/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-0366d6)](https://jeffgallini.github.io/dash-mantine-datatable/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+`dash-mantine-datatable` is a Dash wrapper around [Mantine DataTable](https://github.com/icflorescu/mantine-datatable) for apps that already use `dash-mantine-components`. It adds a Dash-friendly prop model, Mantine style props, component templates for renderers/editors/filters, and chainable Python helpers for columns, grouping, rows, selection, pagination, sorting, and search.
+
+![Basic formatting example](great-docs/assets/examples/hero-basic-formatting.png)
+
+Read the full user guide and recipes on [GitHub Pages](https://jeffgallini.github.io/dash-mantine-datatable/).
 
 ## Install
 
@@ -12,14 +17,13 @@ grouping, rows, selection, pagination, sorting, and search.
 pip install dash-mantine-datatable
 ```
 
-Install the optional demo dependency bundle when you want to run the live
-market-data examples from `usage.py`:
+Optional demo dependencies for the live gallery in `usage.py`:
 
 ```bash
 pip install "dash-mantine-datatable[demo]"
 ```
 
-## Quick Start
+## Quick start
 
 ```python
 from dash import Dash
@@ -47,47 +51,46 @@ if __name__ == "__main__":
     app.run(debug=True)
 ```
 
-## Highlights
+## Features
 
-- Mantine-flavored Dash props such as `radius`, `bg`, `classNames`, `styles`,
-  `bd`, and `bdrs`
-- Chainable helpers including `update_layout()`, `update_table_properties()`,
-  `update_columns()`, `group_columns()`, `update_rows()`,
-  `update_selection()`, `update_pagination()`, `update_sorting()`, and
-  `update_search()`
-- Dash-safe component templates for column renderers, editors, filters, empty
-  states, custom loaders, row expansion content, and sort icons
-- Support for grouped headers, grouped rows, nested child rows, row dragging,
-  server-side pagination, server-side sorting, server-side search, and
-  selector-based row styling rules
-- Multi-language Dash component assets for Python, R, and Julia generated from
-  the same source tree
+- Mantine-native styling via `radius`, `bg`, `classNames`, `styles`, and related props
+- Fluent helpers: `update_layout()`, `update_table_properties()`, `update_columns()`, `group_columns()`, `update_rows()`, `update_selection()`, `update_pagination()`, `update_sorting()`, and `update_search()`
+- Dash component slots for renderers, editors, filters, empty states, loaders, row expansion, and sort icons
+- Client and server modes for pagination, sorting, and search
+- Column filtering with Dash Mantine controls in header popovers
+- Grouped headers, inline row grouping, nested child rows, and row expansion
+- Checkbox selection with shift-range support, row dragging, inline editing, and callback payloads for row/cell interactions
+- Generated Python, R, and Julia component packages from the same source tree
 
-## Compared With `dash-ag-grid`
+## Documentation
 
-The comparison below reflects this package's current `0.1.0` surface and the
-official Dash AG Grid docs as of April 17, 2026.
+| Resource | Link |
+| --- | --- |
+| User guide + recipes | [jeffgallini.github.io/dash-mantine-datatable](https://jeffgallini.github.io/dash-mantine-datatable/) |
+| Interactive demo app | `python usage.py` |
+| API reference (local pdoc) | `python scripts/build_docs.py` |
 
-| Area | `dash-mantine-datatable` | `dash-ag-grid` |
-| --- | --- | --- |
-| UI fit | Best when the rest of the app is already Mantine/DMC and visual consistency matters | Best when the grid is its own major product surface and can use AG Grid's theme/system |
-| Authoring model | Compact Dash API with Python helpers like `update_columns()` and `update_rows()` | Richer but more verbose grid configuration with AG Grid concepts and options |
-| Styling | Mantine props, Mantine tokens, Dash components in table slots | AG Grid theme system plus extensive cell, row, header, and menu customization |
-| Dash component slots | Strong support for Dash components in renderers, editors, filters, empty states, loaders, and row expansion | Strong custom rendering and editing support, with a broader grid API around it |
-| Common app-table features | Sorting, search, selection, pagination, row expansion, row dragging, grouped headers, conditional row rules | All of the above plus a much broader spreadsheet-style feature set |
-| Grouping and hierarchy | Inline row grouping, aggregations, grouped headers, nested child rows | Broader grouping/tree/master-detail model; some advanced features are enterprise-only |
-| Large-data strategy | Client and server modes for pagination, sorting, and search; no AG Grid-style row-model surface exposed | Client-side, infinite, viewport, and server-side row models |
-| Export and clipboard workflows | Not a current focus of the package surface | Mature CSV/export/clipboard workflows and more Excel-like interactions |
-| Analytics features | Focused on application tables, formatting, and interaction | Pivoting, advanced aggregation, charts, sidebars, and other grid-heavy workflows; many advanced features are enterprise-only |
-| Licensing story | MIT package built on the Mantine DataTable ecosystem | Core grid is free; advanced AG Grid features may require an Enterprise license |
-| Best fit | Dash apps that want a polished Mantine-native table without AG Grid complexity | Data-heavy apps that need deep grid mechanics, very large-data tooling, or enterprise spreadsheet features |
+Build the public docs site locally:
 
-Choose `dash-mantine-datatable` when you want the table to feel like the rest
-of a Mantine app and you value a smaller Dash-native API. Choose
-`dash-ag-grid` when the grid itself is the power-user surface and you need row
-models, export, pivoting, or other spreadsheet-grade features.
+```bash
+python -m pip install -e ".[demo]"
+python scripts/build_great_docs.py
+```
 
-## Helper Example
+Regenerate recipe pages from `usage.py`:
+
+```bash
+python scripts/generate_recipes.py
+```
+
+Capture README/recipe screenshots from the running demo:
+
+```bash
+python usage.py
+python scripts/capture_docs_media.py
+```
+
+## Helper example
 
 ```python
 table = (
@@ -106,23 +109,18 @@ table = (
 )
 ```
 
-## API Docs
+## Compared with `dash-ag-grid`
 
-Build the package API docs locally with `pdoc`:
+| Area | `dash-mantine-datatable` | `dash-ag-grid` |
+| --- | --- | --- |
+| UI fit | Best when the app is already Mantine/DMC | Best when the grid is its own major product surface |
+| Authoring model | Compact Dash API with Python helpers | Richer but more verbose AG Grid configuration |
+| Dash component slots | Strong support for DMC renderers, editors, filters, and states | Strong custom rendering with a broader grid API |
+| Common app-table features | Sorting, search, selection, pagination, expansion, dragging, grouped headers | Same core set plus spreadsheet-style tooling |
+| Large-data strategy | Client/server pagination, sorting, and search | Additional row models and enterprise features |
+| Best fit | Mantine-native Dash apps that want polished tables without AG Grid complexity | Data-heavy apps that need spreadsheet-grade grid mechanics |
 
-```bash
-python -m pip install -e ".[docs]"
-python scripts/build_docs.py
-```
-
-This generates a static site in `site/`. The repository also includes
-`.github/workflows/docs.yml`, which rebuilds the same docs and deploys them to
-GitHub Pages whenever `main` changes.
-
-To enable deployment on GitHub, open `Settings -> Pages` and set the publishing
-source to `GitHub Actions`.
-
-## Local Development
+## Local development
 
 ```bash
 npm install --legacy-peer-deps
@@ -134,6 +132,8 @@ python usage.py
 
 ## Publishing
 
+Preflight locally:
+
 ```powershell
 .\scripts\check-release.ps1
 ```
@@ -142,36 +142,16 @@ python usage.py
 python scripts/check_release.py
 ```
 
-Use `staging` as the integration branch for contributor PRs, then open a
-release PR from `staging` into `main` when you are ready to publish. The
-release PR title is the source of truth for the next package version, so title
-it like `v0.1.1 Release - Improved Documentation and reduced console warnings`.
+Release flow:
 
-The release guard validates that:
+1. Land changes on `staging`.
+2. Open a `staging -> main` PR titled `v1.0.0 Release - Stable feature set, docs site, and bug fixes`.
+3. Merge to publish to PyPI, create the GitHub release, and deploy docs to GitHub Pages.
 
-- the PR is `staging -> main`
-- the title starts with `vX.Y.Z Release`
-- the requested version is newer than the current package version
+Required one-time setup:
 
-When that release PR is merged, `.github/workflows/publish-release.yml` will:
+- Protect `main` and require the Release PR Guard workflow.
+- Configure GitHub Pages to publish from GitHub Actions.
+- Add `PYPI_API_TOKEN` to the `pypi` environment.
 
-- stamp the requested version into `package.json`, `package-lock.json`,
-  `dash_mantine_datatable/package-info.json`, and `Project.toml`
-- promote `## Unreleased` in `CHANGELOG.md` into `## X.Y.Z - YYYY-MM-DD`
-  or, if needed, create a release section from the title summary
-- commit those release metadata changes back to `main`
-- rebuild, test, package, upload to PyPI, and create or update a GitHub release
-
-Recommended changelog flow:
-
-- Keep a `## Unreleased` section at the top of `CHANGELOG.md` on `staging`.
-- Add release notes there as contributors land changes.
-- Let the publish workflow convert that section into the final versioned entry.
-
-One-time GitHub setup:
-
-- Create a long-lived `staging` branch.
-- Protect `main` so changes land by pull request, not direct push.
-- Require the `Release PR Guard` workflow on `main`.
-- Add a `PYPI_API_TOKEN` secret to the `pypi` environment used by the publish
-  workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md) for details.

@@ -14,7 +14,17 @@ npm run build:js
 npm run build:backends
 python -m pytest
 python usage.py
+python scripts/generate_recipes.py
+python scripts/build_great_docs.py
+python scripts/capture_docs_media.py
 ```
+
+## Documentation
+
+- Public docs are built from `great-docs/` with Quarto via `python scripts/build_great_docs.py`.
+- Recipe pages are generated from `usage.py` via `python scripts/generate_recipes.py`.
+- Screenshots for README and recipes come from `python scripts/capture_docs_media.py` while `usage.py` is running.
+- `.github/workflows/docs.yml` publishes `great-docs/_site` to GitHub Pages on every `main` push.
 
 ## Branch workflow
 

@@ -1,0 +1,45 @@
+---
+title: Reference
+body-classes: doc-reference
+page-navigation: false
+---
+
+::: {.doc-description}
+The Python API centers on the Dash DataTable component, small dictionary builders for common nested props, and fluent methods for updating table behavior in place.
+:::
+
+## Component {.doc-group}
+
+::: {.doc-description}
+Main generated Dash component.
+:::
+
+[DataTable](DataTable.qmd#dash_mantine_datatable.DataTable){.doc-module .doc-label .doc-label-module}
+
+:   
+
+## Helper Builders {.doc-group}
+
+::: {.doc-description}
+Dictionary factories for readable table configuration.
+:::
+
+[Column()](Column.qmd#dash_mantine_datatable.Column){.doc-function .doc-label .doc-label-function}
+
+:   
+
+[ColumnGroup()](ColumnGroup.qmd#dash_mantine_datatable.ColumnGroup){.doc-function .doc-label .doc-label-function}
+
+:   
+
+[SelectionConfig()](SelectionConfig.qmd#dash_mantine_datatable.SelectionConfig){.doc-function .doc-label .doc-label-function}
+
+:   
+
+[PaginationConfig()](PaginationConfig.qmd#dash_mantine_datatable.PaginationConfig){.doc-function .doc-label .doc-label-function}
+
+:   
+
+[RowExpansionConfig()](RowExpansionConfig.qmd#dash_mantine_datatable.RowExpansionConfig){.doc-function .doc-label .doc-label-function}
+
+:   

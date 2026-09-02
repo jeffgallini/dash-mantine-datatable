@@ -1,0 +1,45 @@
+---
+title: Getting Started
+description: Install dash-mantine-datatable and render a first Mantine-styled Dash table.
+bread-crumbs: false
+---
+
+# Getting Started
+
+Install the package from PyPI:
+
+```bash
+pip install dash-mantine-datatable
+```
+
+Then create a small Dash app:
+
+```python
+from dash import Dash
+import dash_mantine_components as dmc
+import dash_mantine_datatable as dmdt
+
+app = Dash()
+
+app.layout = dmc.MantineProvider(
+    dmdt.DataTable(
+        id="employees",
+        data=[
+            {"id": 1, "name": "Avery Stone", "team": "Platform", "status": "On Track"},
+            {"id": 2, "name": "Mina Patel", "team": "Growth", "status": "Planning"},
+        ],
+        columns=[
+            dmdt.Column("name", title="Name", sortable=True),
+            dmdt.Column("team", title="Team", sortable=True),
+            dmdt.Column("status", title="Status", presentation="badge"),
+        ],
+    ).update_layout(radius="lg", withTableBorder=True, striped=True)
+)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+Use the API reference when you need the complete constructor and helper-method
+surface. Use the recipes when you want copy-pasteable patterns pulled from the
+interactive `usage.py` demo.

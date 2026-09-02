@@ -1,0 +1,19 @@
+# dash_mantine_datatable
+
+## Docs
+
+### API Reference
+
+#### Component
+> Main generated Dash component.
+
+- [DataTable](reference/DataTable.html): Description
+
+#### Helper Builders
+> Dictionary factories for readable table configuration.
+
+- [Column](reference/Column.html): Description
+- [ColumnGroup](reference/ColumnGroup.html): Description
+- [SelectionConfig](reference/SelectionConfig.html): Description
+- [PaginationConfig](reference/PaginationConfig.html): Description
+- [RowExpansionConfig](reference/RowExpansionConfig.html): Description

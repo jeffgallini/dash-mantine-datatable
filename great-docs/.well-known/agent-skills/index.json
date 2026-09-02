@@ -1,0 +1,11 @@
+{
+  "skills": [
+    {
+      "name": "dash-mantine-datatable",
+      "description": "Use when writing Python code that uses the dash_mantine_datatable package.",
+      "files": [
+        "SKILL.md"
+      ]
+    }
+  ]
+}

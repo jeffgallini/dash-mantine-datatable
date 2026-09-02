@@ -2,13 +2,25 @@
 
 ## Unreleased
 
-- Added GitHub Actions to validate `staging -> main` release pull requests and
-  publish releases to PyPI and GitHub after merge.
-- Made the release pull request title the source of truth for the next package
-  version, with automated version stamping and changelog promotion during the
-  publish workflow.
-- Documented the staging-based release flow and the local release preflight
-  steps for contributors and maintainers.
+### Added
+
+- Great Docs site with user guide, recipes, and API reference, published to GitHub Pages.
+- Recipe generator (`scripts/generate_recipes.py`) that keeps docs examples aligned with `usage.py`.
+- Documentation media capture helper for README and recipe screenshots.
+- Restored GitHub Actions for docs deployment, release PR validation, and PyPI publishing.
+
+### Changed
+
+- README refreshed with docs link, badges, feature overview, and example media.
+- GitHub Pages docs workflow now builds the Quarto Great Docs site instead of pdoc-only output.
+
+### Fixed
+
+- Dash template rendering for grouped hierarchy cells and expansion chevrons.
+- Filter popover dismissal for MultiSelect, Select, DateInput, and Autocomplete controls.
+- Array-valued cell display formatting for filter and presentation columns.
+- Table min-height row stretch behavior in fixed-height layouts.
+- Inline editor and filter `setProps` synchronization for Dash Mantine controls.
 
 ## 0.1.0 - 2026-04-07
 

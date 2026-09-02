@@ -27,14 +27,14 @@ except ImportError:  # pragma: no cover - optional demo dependency
     yf = None
 
 
-USE_LIVE_ICONIFY = os.environ.get("DMDT_USAGE_ENABLE_ICONIFY", "").strip() == "1"
+USE_LIVE_ICONIFY = os.environ.get("DMDT_USAGE_ENABLE_ICONIFY", "1").strip() != "0"
 USE_FULL_RUNTIME_DEMOS = (
     os.environ.get("DMDT_USAGE_ENABLE_FULL_RUNTIME_DEMOS", "1").strip() != "0"
 )
 
 
 def DashIconify(*args, **kwargs):
-    """Return a safe live icon placeholder unless iconify is explicitly enabled."""
+    """Return live dash-iconify icons by default; set DMDT_USAGE_ENABLE_ICONIFY=0 for stubs."""
 
     if USE_LIVE_ICONIFY:
         return _DashIconifyComponent(*args, **kwargs)
@@ -5260,6 +5260,7 @@ def build_inline_edit_columns():
                 label="Tags",
                 data=INLINE_EDIT_TAG_OPTIONS,
                 searchable=True,
+                comboboxProps={"withinPortal": False},
             ),
         },
         {
@@ -5306,7 +5307,7 @@ def build_inline_edit_code():
         '                    dmc.Radio(label="Approved", value="Approved"),',
         "                ], gap=6),",
         '            ), "render": dmc.Badge("{category}", variant="light", color="blue")},',
-        '            {"accessor": "tags", "editable": True, "editor": dmc.MultiSelect(label="Tags", data=INLINE_EDIT_TAG_OPTIONS, searchable=True)},',
+        '            {"accessor": "tags", "editable": True, "editor": dmc.MultiSelect(label="Tags", data=INLINE_EDIT_TAG_OPTIONS, searchable=True, comboboxProps={"withinPortal": False})},',
         '            {"accessor": "reviewDate", "presentation": "date", "editable": True, "editor": dmc.DateInput(label="Review date", valueFormat="YYYY-MM-DD")},',
         '            {"accessor": "adjustment", "textAlign": "right", "editable": True, "editor": dmc.NumberInput(label="Adjustment", min=-2, max=6, step=1, hideControls=True)},',
         "        ],",
