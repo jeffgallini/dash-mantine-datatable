@@ -142,4 +142,13 @@
     .dash-mantine-datatable-editable-dropdown > * {
         width: 100%;
     }
+
+    /* Keep minHeight on the wrapper from stretching body rows. */
+    .dash-mantine-datatable-root > .mantine-datatable {
+        flex: 0 0 auto;
+    }
+
+    .dash-mantine-datatable-root .mantine-datatable-table tbody tr {
+        height: auto;
+    }
 }

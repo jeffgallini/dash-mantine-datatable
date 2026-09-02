@@ -2230,6 +2230,24 @@ const materializeDashComponent = (
     return React.createElement(componentType, resolvedProps);
 };
 
+const getHydratedDashLayout = (node) => {
+    if (!React.isValidElement(node)) {
+        return null;
+    }
+
+    const props = node.props || EMPTY_OBJECT;
+
+    if (isDryComponent(props.component)) {
+        return props.component;
+    }
+
+    if (isDryComponent(props._dashprivate_layout)) {
+        return props._dashprivate_layout;
+    }
+
+    return null;
+};
+
 const renderTemplateNode = (
     node,
     context,
@@ -2237,8 +2255,30 @@ const renderTemplateNode = (
     nodePath = EMPTY_ARRAY
 ) => {
     if (React.isValidElement(node)) {
+        // Dash-hydrated wrappers cannot be safely cloneElement'd for per-row
+        // template interpolation. Re-materialize from the dry layout instead.
+        const hydratedLayout = getHydratedDashLayout(node);
+        if (hydratedLayout) {
+            return materializeDashComponent(
+                hydratedLayout,
+                context,
+                renderOptions,
+                nodePath
+            );
+        }
+
         const nextProps = Object.keys(node.props || {}).reduce(
             (accumulator, key) => {
+                // Preserve Dash/React internals when cloning plain elements.
+                if (
+                    key === 'component' ||
+                    key === 'componentPath' ||
+                    key.startsWith('_dashprivate_')
+                ) {
+                    accumulator[key] = node.props[key];
+                    return accumulator;
+                }
+
                 accumulator[key] = renderTemplateNode(
                     node.props[key],
                     context,
@@ -4299,6 +4339,12 @@ const DataTable = ({
         mah: isNil(props.mah) ? props.maxHeight : props.mah,
         radius: isNil(props.borderRadius) ? props.radius : props.borderRadius,
     };
+    // Apply minHeight on the outer wrapper so Mantine DataTable does not
+    // stretch body rows to fill leftover vertical space (see issue #8).
+    const wrapperMinHeight = resolvedRootProps.mih;
+    const tableRootProps = { ...resolvedRootProps };
+    delete tableRootProps.mih;
+    delete tableRootProps.minHeight;
     const resolvedTableProps =
         hasInlineHierarchy || isGroupedChildTable
             ? {
@@ -4366,9 +4412,18 @@ const DataTable = ({
             initialDirection={layoutDirection}
             key={`${id || 'datatable'}-${layoutDirection}`}
         >
-            <Box dir={layoutDirection}>
+            <Box
+                className="dash-mantine-datatable-root"
+                dir={layoutDirection}
+                mih={wrapperMinHeight}
+                style={
+                    isNil(wrapperMinHeight)
+                        ? undefined
+                        : { display: 'flex', flexDirection: 'column' }
+                }
+            >
                 <MantineDataTable
-                    {...resolvedRootProps}
+                    {...tableRootProps}
                     {...resolvedTableProps}
                     id={id}
                     backgroundColor={resolvedRootProps.bg}
@@ -4411,7 +4466,6 @@ const DataTable = ({
                     loaderSize={props.loaderSize}
                     loaderType={props.loaderType}
                     maxHeight={resolvedRootProps.mah}
-                    minHeight={resolvedRootProps.mih}
                     noHeader={props.noHeader}
                     noRecordsIcon={resolvedNoRecordsIcon}
                     noRecordsText={noRecordsText}
