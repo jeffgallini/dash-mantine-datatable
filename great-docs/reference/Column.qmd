@@ -1,0 +1,149 @@
+---
+title: "[Column()]{.doc-object-name .doc-function .doc-label .doc-label-function}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [Column()]{.doc-object-name .doc-function .doc-label .doc-label-function}
+
+::: {.doc-subject}
+
+:::
+
+::: {.doc-usage-source}
+Usage
+
+[Source](https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\__init__.py#L263-L357){target="_blank" rel="noopener"}
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```python
+Column(accessor=None, /, **kwargs)
+```
+:::
+
+## Description {.doc-description}
+
+Build a column-definition dictionary for `DataTable(columns=[...])`.
+This helper is the quickest way to create readable column configs from
+Python without manually repeating `{"accessor": ...}` for every column.
+
+## Parameters {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[accessor]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str | None]{.doc-parameter-annotation} [=]{.doc-parameter-default-sep .op} [None]{.doc-parameter-default}</code>
+
+:   Description: Record key rendered by the column. This becomes the
+    column identifier used by helpers such as
+    `table.update_columns(selector="salary", ...)`.
+    Example: `Column("salary")`.
+
+<code>[title]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Header label shown above the column. If omitted, the
+    frontend falls back to the accessor or its built-in title formatting.
+    Example: `title="Annual Salary"`.
+
+<code>[presentation]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Built-in display mode used to format cell values.
+    Expected inputs: `'text'`, `'number'`, `'currency'`, `'date'`,
+    `'datetime'`, `'badge'`, `'link'`, `'code'`, `'json'`, `'progress'`.
+    Example: `presentation="currency"`.
+
+<code>[sortable]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Enables sorting for the column.
+    Example: `sortable=True`.
+
+<code>[editable]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Enables double-click editing for the column. Pair this
+    with `editor` when you want a custom Dash input component.
+    Example: `editable=True`.
+
+<code>[editor]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [Any]{.doc-parameter-annotation}</code>
+
+:   Description: Dash component used as the in-place editor for editable
+    cells.
+    Example: `editor=dmc.NumberInput(min=0, thousandSeparator=",")`.
+
+<code>[render]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [Any]{.doc-parameter-annotation}</code>
+
+:   Description: Dash component or renderer payload used for custom cell
+    content.
+    Example: `render=dmc.Text("View", c="blue")`.
+
+<code>[filter]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [Any]{.doc-parameter-annotation}</code>
+
+:   Description: Dash component rendered in the column filter popover.
+    Example: `filter=dmc.TextInput(placeholder="Filter names")`.
+
+<code>[textAlign]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Horizontal alignment for cell content.
+    Expected inputs: values accepted by Mantine/DataTable such as
+    `'left'`, `'center'`, `'right'`.
+    Example: `textAlign="right"`.
+
+<code>[width]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [int | float | str]{.doc-parameter-annotation}</code>
+
+:   Description: Column width. You can pass a numeric pixel value or a CSS
+    width string.
+    Example: `width=140`.
+
+<code>[cellsStyle]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Inline style mapping applied to body cells.
+    Example: `cellsStyle={"fontVariantNumeric": "tabular-nums"}`.
+
+<code>[titleStyle]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Inline style mapping applied to the header cell.
+    Example: `titleStyle={"textTransform": "uppercase"}`.
+
+<code>[draggable]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Allows the column to participate in column dragging.
+    Example: `draggable=True`.
+
+<code>[toggleable]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Allows the column to be shown or hidden by column
+    customization controls.
+    Example: `toggleable=True`.
+
+<code>[resizable]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Allows the column width to be resized by the user.
+    Example: `resizable=True`.
+
+<code>[defaultToggle]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool]{.doc-parameter-annotation}</code>
+
+:   Description: Initial visibility state used when column toggling is
+    enabled.
+    Example: `defaultToggle=False`.
+:::
+
+## Returns {.doc-returns}
+
+::: {.doc-definition-items}
+<code> [dict]{.doc-parameter-annotation}</code>
+
+:   A Dash-safe column configuration dictionary.
+:::
+
+## Notes {.doc-notes}
+
+The helper does not validate every possible column key. It simply builds a
+plain dictionary, which makes it safe to use with existing Mantine
+DataTable column options and this package's Dash-specific additions.
+
+## Examples {.doc-examples}
+
+```python
+>>> Column("salary", title="Salary", presentation="currency", currency="USD")
+{'accessor': 'salary', 'title': 'Salary', 'presentation': 'currency', 'currency': 'USD'}
+>>> Column("status", presentation="badge", badgeColorAccessor="statusColor")
+{'accessor': 'status', 'presentation': 'badge', 'badgeColorAccessor': 'statusColor'}
+```

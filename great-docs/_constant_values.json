@@ -1,0 +1,11 @@
+{
+  "DataTable.ComponentSingleType": {
+    "value": "typing.Union[str, int, float, Component, None]"
+  },
+  "DataTable.ComponentType": {
+    "value": "typing.Union[ComponentSingleType, typing.Sequence[ComponentSingleType]]"
+  },
+  "DataTable.NumberType": {
+    "value": "typing.Union[typing.SupportsFloat, typing.SupportsInt, typing.SupportsComplex]"
+  }
+}

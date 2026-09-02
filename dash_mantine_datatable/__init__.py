@@ -72,6 +72,8 @@ _PROP_ALIASES = {
     "default_column_render": "defaultColumnRender",
     "dir": "direction",
     "disabled_selection_row_rules": "disabledSelectionRowRules",
+    "filter_mode": "filterMode",
+    "filter_values": "filterValues",
     "fontSize": "fz",
     "group_aggregations": "groupAggregations",
     "group_by": "groupBy",
@@ -89,27 +91,24 @@ _PROP_ALIASES = {
     "sort_icons": "sortIcons",
 }
 _EXTRA_BASE_NODES = (
+    # Intentionally empty: loader/empty-state/sort-icon slots are materialized
+    # by DataTable from dry JSON so template cloning stays Dash-safe.
+)
+# Keep template slots out of `_children_props`. Dash would otherwise hydrate
+# them into wrappers that cannot be safely cloned/re-rendered for templates,
+# which surfaces as "undefined was not found" and blank cells. Top-level
+# Component values are converted to dry JSON in DataTable.__init__ /
+# _update_props so the Python API still accepts Dash components.
+_EXTRA_CHILDREN_PROPS = ()
+_TEMPLATE_SLOT_PROPS = (
     "customLoader",
     "defaultColumnRender",
     "emptyState",
     "noRecordsIcon",
 )
-_EXTRA_CHILDREN_PROPS = (
-    "columns[].render",
-    "columns[].editor",
-    "columns[].filter",
-    "columns[].footer",
-    "customLoader",
-    "defaultColumnProps.render",
-    "defaultColumnProps.editor",
-    "defaultColumnProps.filter",
-    "defaultColumnProps.footer",
-    "defaultColumnRender",
-    "emptyState",
-    "noRecordsIcon",
-    "sortIcons.sorted",
-    "sortIcons.unsorted",
-)
+_TEMPLATE_NESTED_SLOT_PROPS = {
+    "sortIcons": ("sorted", "unsorted"),
+}
 _MERGED_MAPPING_PROPS = {"style", "styles", "classNames", "tableProps", "scrollAreaProps"}
 _COLUMN_MERGE_PROPS = {
     "cellAttributes",
@@ -152,7 +151,47 @@ def _normalize_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
         if canonical in normalized and canonical != key:
             raise TypeError(f"Received both '{canonical}' and alias '{key}'.")
         normalized[canonical] = value
-    return normalized
+    return _serialize_template_slots(normalized)
+
+
+def _serialize_dash_tree(value: Any) -> Any:
+    """Convert Dash Component trees into dry JSON component dictionaries."""
+
+    if value is None:
+        return None
+
+    to_plotly_json = getattr(value, "to_plotly_json", None)
+    if callable(to_plotly_json):
+        # Component.to_plotly_json() may still contain nested Component
+        # instances in props/children, so recurse through the result.
+        return _serialize_dash_tree(to_plotly_json())
+
+    if isinstance(value, (list, tuple)):
+        return [_serialize_dash_tree(item) for item in value]
+
+    if isinstance(value, dict):
+        return {key: _serialize_dash_tree(item) for key, item in value.items()}
+
+    return value
+
+
+def _serialize_template_slots(mapping: dict[str, Any]) -> dict[str, Any]:
+    serialized = dict(mapping)
+
+    for key in _TEMPLATE_SLOT_PROPS:
+        if key in serialized:
+            serialized[key] = _serialize_dash_tree(serialized[key])
+
+    for key, nested_keys in _TEMPLATE_NESTED_SLOT_PROPS.items():
+        if key not in serialized or not isinstance(serialized[key], dict):
+            continue
+        nested = dict(serialized[key])
+        for nested_key in nested_keys:
+            if nested_key in nested:
+                nested[nested_key] = _serialize_dash_tree(nested[nested_key])
+        serialized[key] = nested
+
+    return serialized
 
 
 def _normalize_column(column: Any) -> dict[str, Any]:
@@ -1733,6 +1772,43 @@ class DataTable(_GeneratedDataTable):
         """
         return self._update_props(**kwargs)
 
+    def update_filters(self, **kwargs: Any) -> "DataTable":
+        """
+        Description
+        -----------
+        Update column-filter state and mode in place.
+
+        Parameters
+        ----------
+        filterMode : str, optional
+            Description: Chooses where column filter values are applied.
+            Expected inputs: `'client'`, `'server'`, `'none'`.
+            Example: `filterMode="client"`.
+        filterValues : dict, optional
+            Description: Controlled mapping of column accessors to filter
+            values. The table also writes this prop when filter components
+            change.
+            Example: `filterValues={"name": "avery", "team": ["Platform"]}`.
+
+        Returns
+        -------
+        DataTable
+            The current instance.
+
+        Notes
+        -----
+        Client mode is the default: DMC filter components rendered in column
+        popovers are wired internally and combined with search, sorting, and
+        pagination. In server mode, the table still reports `filterValues` and
+        `lastFilterChange` so a Dash callback can fetch data.
+
+        Examples
+        --------
+        >>> table.update_filters(filterMode="server")
+        DataTable(...)
+        """
+        return self._update_props(**kwargs)
+
     def clear_selection(self) -> "DataTable":
         """
         Description
@@ -2068,6 +2144,15 @@ _set_doc_signature(
         _doc_parameter("searchQuery", default=None),
         _doc_parameter("searchMode", default=None),
         _doc_parameter("searchableAccessors", default=None),
+    ],
+)
+
+_set_doc_signature(
+    DataTable.update_filters,
+    [
+        _doc_parameter("self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        _doc_parameter("filterMode", default=None),
+        _doc_parameter("filterValues", default=None),
     ],
 )
 

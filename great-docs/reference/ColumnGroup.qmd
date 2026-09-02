@@ -1,0 +1,93 @@
+---
+title: "[ColumnGroup()]{.doc-object-name .doc-function .doc-label .doc-label-function}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [ColumnGroup()]{.doc-object-name .doc-function .doc-label .doc-label-function}
+
+::: {.doc-subject}
+
+:::
+
+::: {.doc-usage-source}
+Usage
+
+[Source](https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\__init__.py#L360-L427){target="_blank" rel="noopener"}
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```python
+ColumnGroup(group_id=None, /, *, columns=None, groups=None, **kwargs)
+```
+:::
+
+## Description {.doc-description}
+
+Build a grouped-header definition for `DataTable(groups=[...])`. Use this
+when you want multiple header rows, such as a "Compensation" group above
+salary and bonus columns.
+
+## Parameters {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[group_id]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str | None]{.doc-parameter-annotation} [=]{.doc-parameter-default-sep .op} [None]{.doc-parameter-default}</code>
+
+:   Description: Stable identifier for the group. This is the id you use
+    later with `table.group_columns(selector="compensation", ...)`.
+    Example: `group_id="compensation"`.
+
+<code>[columns]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[Any] | None]{.doc-parameter-annotation} [=]{.doc-parameter-default-sep .op} [None]{.doc-parameter-default}</code>
+
+:   Description: Column references attached directly to this group. Each
+    item may be an accessor string like `"salary"` or a full column
+    dictionary.
+    Example: `columns=["salary", "bonus"]`.
+
+<code>[groups]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[dict[str, Any]] | None]{.doc-parameter-annotation} [=]{.doc-parameter-default-sep .op} [None]{.doc-parameter-default}</code>
+
+:   Description: Nested child groups for multi-row grouped headers.
+    Example: `groups=[ColumnGroup("cash", columns=["salary", "bonus"])]`.
+
+<code>[title]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Visible header label for the group.
+    Example: `title="Compensation"`.
+
+<code>[style]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Inline style mapping applied to the group header cell.
+    Example: `style={"textAlign": "center"}`.
+
+<code>[headerStyle]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Header-specific style mapping forwarded to the frontend.
+    Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
+
+<code>[textAlign]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Alignment hint for grouped-header content.
+    Expected inputs: values accepted by Mantine/DataTable such as
+    `'left'`, `'center'`, `'right'`.
+    Example: `textAlign="center"`.
+:::
+
+## Returns {.doc-returns}
+
+::: {.doc-definition-items}
+<code> [dict]{.doc-parameter-annotation}</code>
+
+:   A grouped-header configuration dictionary.
+:::
+
+## Notes {.doc-notes}
+
+Group dictionaries are plain Python objects, so they can be freely mixed
+with `Column(...)` output and raw dictionaries in the same `groups` list.
+
+## Examples {.doc-examples}
+
+```python
+>>> ColumnGroup("profile", title="Profile", columns=["name", "team"])
+{'id': 'profile', 'columns': ['name', 'team'], 'title': 'Profile'}
+```

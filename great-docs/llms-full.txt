@@ -1,0 +1,601 @@
+----------------------------------------------------------------------
+This is the API documentation for the dash_mantine_datatable library.
+----------------------------------------------------------------------
+
+
+## Component
+
+Main generated Dash component.
+
+
+DataTable(id: Union[str, dict, NoneType] = None, data: Optional[Sequence[dict]] = None, records: Optional[Sequence[dict]] = None, columns: Optional[Sequence[dict]] = None, groups: Optional[Sequence[dict]] = None, groupBy: Union[str, Sequence[str], NoneType] = None, childRowsAccessor: Optional[str] = None, groupAggregations: Optional[dict] = None, idAccessor: Union[str, dict, Sequence[str], NoneType] = None, locale: Optional[str] = None, direction: Optional[Literal['ltr', 'rtl']] = None, paginationMode: Optional[Literal['client', 'server', 'none']] = None, sortMode: Optional[Literal['client', 'server']] = None, searchMode: Optional[Literal['client', 'server']] = None, filterMode: Optional[Literal['client', 'server', 'none']] = None, searchQuery: Optional[str] = None, searchableAccessors: Optional[Sequence[str]] = None, filterValues: Optional[dict] = None, page: Union[SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, recordsPerPage: Union[SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pageSize: Union[SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, totalRecords: Union[SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, sortStatus: Optional[dict] = None, selectedRecordIds: Optional[Sequence] = None, selectedRecords: Optional[Sequence] = None, expandedRecordIds: Optional[Sequence] = None, selectionTrigger: Optional[Literal['cell', 'checkbox']] = None, selectionColumnClassName: Optional[str] = None, selectionColumnStyle: Optional[dict] = None, selectionCheckboxProps: Optional[dict] = None, allRecordsSelectionCheckboxProps: Optional[dict] = None, selectableRowRules: Union[bool, dict, Sequence, NoneType] = None, disabledSelectionRowRules: Union[bool, dict, Sequence, NoneType] = None, selectionCheckboxRules: Union[dict, Sequence, NoneType] = None, rowDragging: Union[bool, dict, NoneType] = None, rowColor: Union[str, dict, Sequence, NoneType] = None, rowBackgroundColor: Union[str, dict, Sequence, NoneType] = None, rowClassName: Union[str, dict, Sequence, NoneType] = None, rowAttributes: Union[dict, Sequence, NoneType] = None, rowStyle: Union[dict, Sequence, NoneType] = None, rowExpansion: Optional[dict] = None, rowClick: Optional[dict] = None, rowDoubleClick: Optional[dict] = None, rowContextMenu: Optional[dict] = None, cellClick: Optional[dict] = None, cellDoubleClick: Optional[dict] = None, cellContextMenu: Optional[dict] = None, pagination: Optional[dict] = None, scrollPosition: Optional[dict] = None, scrollEdge: Optional[dict] = None, lastRowDragChange: Optional[dict] = None, lastSortChange: Optional[dict] = None, lastSelectionChange: Optional[dict] = None, lastExpansionChange: Optional[dict] = None, lastFilterChange: Optional[dict] = None, emptyState: Union[str, dict, NoneType] = None, noRecordsIcon: Optional[Any] = None, noRecordsText: Optional[str] = None, recordsPerPageOptions: Optional[Sequence[Union[SupportsFloat, SupportsInt, SupportsComplex]]] = None, pageSizeOptions: Optional[Sequence[Union[SupportsFloat, SupportsInt, SupportsComplex]]] = None, recordsPerPageLabel: Optional[str] = None, paginationSize: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, paginationActiveTextColor: Union[str, dict, NoneType] = None, paginationActiveBackgroundColor: Union[str, dict, NoneType] = None, loadingText: Optional[str] = None, tableProps: Optional[dict] = None, scrollAreaProps: Optional[dict] = None, className: Optional[str] = None, tableClassName: Optional[str] = None, classNames: Optional[dict] = None, style: Optional[Any] = None, styles: Optional[dict] = None, radius: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, height: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, minHeight: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, maxHeight: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, shadow: Optional[str] = None, bg: Union[str, dict, NoneType] = None, c: Union[str, dict, NoneType] = None, backgroundColor: Union[str, dict, NoneType] = None, borderColor: Union[str, dict, NoneType] = None, rowBorderColor: Union[str, dict, NoneType] = None, stripedColor: Union[str, dict, NoneType] = None, highlightOnHoverColor: Union[str, dict, NoneType] = None, withRowBorders: Optional[bool] = None, withTableBorder: Optional[bool] = None, withColumnBorders: Optional[bool] = None, horizontalSpacing: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, verticalSpacing: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, borderRadius: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, striped: Optional[bool] = None, highlightOnHover: Optional[bool] = None, textSelectionDisabled: Optional[bool] = None, fetching: Optional[bool] = None, loaderBackgroundBlur: Union[SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, loaderSize: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, loaderType: Optional[str] = None, loaderColor: Optional[str] = None, customLoader: Optional[Any] = None, noHeader: Optional[bool] = None, pinFirstColumn: Optional[bool] = None, pinLastColumn: Optional[bool] = None, stickyHeader: Optional[bool] = None, stickyHeaderOffset: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, verticalAlign: Optional[Literal['top', 'center', 'bottom']] = None, paginationWithEdges: Optional[bool] = None, paginationWithControls: Optional[bool] = None, storeColumnsKey: Optional[str] = None, defaultColumnProps: Optional[dict] = None, defaultColumnRender: Optional[Any] = None, sortIcons: Optional[dict] = None, bodyRef: Optional[Any] = None, tableRef: Optional[Any] = None, m: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mx: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, my: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mt: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mb: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, ms: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, me: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, ml: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mr: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, p: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, px: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, py: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pt: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pb: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, ps: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pe: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pl: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, pr: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, w: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, miw: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, maw: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, h: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mih: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, mah: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, opacity: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, ff: Optional[str] = None, fz: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, fw: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, lts: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, ta: Optional[str] = None, lh: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, fs: Optional[str] = None, tt: Optional[str] = None, display: Optional[str] = None, flex: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, bd: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, bdrs: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, td: Optional[str] = None, bgsz: Optional[str] = None, bgp: Optional[str] = None, bgr: Optional[str] = None, bga: Optional[str] = None, pos: Optional[str] = None, top: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, left: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, bottom: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, right: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, inset: Union[str, SupportsFloat, SupportsInt, SupportsComplex, NoneType] = None, hiddenFrom: Optional[str] = None, visibleFrom: Optional[str] = None)
+
+Description
+-----------
+Declarative Dash table component with chainable Python-side configuration
+helpers. `DataTable` wraps Mantine DataTable in a Dash-friendly API that
+works well with `dash-mantine-components`, while also adding helpers for
+columns, grouped headers, row rules, selection, pagination, sorting, and
+search.
+
+If you are new to the package, the usual pattern is:
+
+1. Pass `data` and `columns` when you construct the table.
+2. Set `idAccessor` if your row id field is not named `id`.
+3. Choose client-side or server-side behavior with
+   `paginationMode`, `sortMode`, and `searchMode`.
+4. Use chainable helpers like `update_columns()` and `update_rows()` to
+   refine behavior after the base table is created.
+
+Parameters
+----------
+id : str | dict, optional
+    Description: Dash component id used in callbacks.
+    Example: `id="employees-table"`.
+data : list[dict], optional
+    Description: Table records. This is the preferred Dash-facing alias
+    for row data.
+    Example: `data=[{"id": 1, "name": "Avery"}]`.
+records : list[dict], optional
+    Description: Alias for `data` kept for Mantine DataTable familiarity.
+    If both are supplied, use one source of truth.
+    Example: `records=[{"id": 1, "name": "Avery"}]`.
+columns : list[dict], optional
+    Description: Column definitions. Each column typically has an
+    `accessor`, and may also include formatting, sorting, filtering, or
+    editing behavior.
+    Example: `columns=[Column("name"), Column("salary", presentation="currency")]`.
+groups : list[dict], optional
+    Description: Grouped-header definitions for multi-row column headers.
+    Example: `groups=[ColumnGroup("profile", title="Profile", columns=["name", "team"])]`.
+idAccessor : str | dict | list[str], optional
+    Description: Record identifier accessor used for selection, expansion,
+    row rules, and drag operations. Use this when your row key is not the
+    default `id`.
+    Example: `idAccessor="employeeId"`.
+groupBy : str | list[str], optional
+    Description: Accessor or accessors used for inline row grouping.
+    Example: `groupBy="team"`.
+childRowsAccessor : str, optional
+    Description: Accessor containing nested child rows when your data is
+    already hierarchical.
+    Example: `childRowsAccessor="children"`.
+groupAggregations : dict, optional
+    Description: Aggregation mapping for grouped parent rows.
+    Expected inputs: built-in aggregations such as `'sum'`, `'mean'`,
+    `'median'`, `'min'`, `'max'`, `'count'`, or a custom client-side
+    function string.
+    Example: `groupAggregations={"salary": "sum"}`.
+paginationMode : str, optional
+    Description: Chooses where pagination is handled.
+    Expected inputs: `'client'`, `'server'`, `'none'`.
+    Example: `paginationMode="server"`.
+sortMode : str, optional
+    Description: Chooses where sorting is handled.
+    Expected inputs: `'client'`, `'server'`.
+    Example: `sortMode="client"`.
+searchMode : str, optional
+    Description: Chooses where search filtering is handled.
+    Expected inputs: `'client'`, `'server'`.
+    Example: `searchMode="client"`.
+searchQuery : str, optional
+    Description: Controlled search text.
+    Example: `searchQuery="platform"`.
+searchableAccessors : list[str], optional
+    Description: Limits client-side search to specific record fields.
+    Example: `searchableAccessors=["name", "team", "role"]`.
+page : int | float, optional
+    Description: Current page in controlled pagination mode.
+    Example: `page=1`.
+recordsPerPage : int | float, optional
+    Description: Number of rows shown per page.
+    Example: `recordsPerPage=25`.
+totalRecords : int | float, optional
+    Description: Total record count, usually required in server-side
+    pagination mode.
+    Example: `totalRecords=248`.
+selectionTrigger : str, optional
+    Description: Enables selection and decides how it is triggered.
+    Expected inputs: `'cell'`, `'checkbox'`.
+    Example: `selectionTrigger="checkbox"`.
+selectedRecordIds : list[Any], optional
+    Description: Controlled ids for selected rows.
+    Example: `selectedRecordIds=[1, 3]`.
+rowExpansion : dict, optional
+    Description: Configuration for per-row detail panels.
+    Example: `rowExpansion=RowExpansionConfig(content=dmc.Text("Details"))`.
+rowDragging : bool | dict, optional
+    Description: Enables drag-and-drop row reordering.
+    Example: `rowDragging=True`.
+locale : str, optional
+    Description: Locale used for number and date formatting.
+    Example: `locale="en-US"`.
+direction : str, optional
+    Description: Layout direction for LTR or RTL UIs.
+    Expected inputs: `'ltr'`, `'rtl'`.
+    Example: `direction="rtl"`.
+radius : str | int | float, optional
+    Description: Border radius for the table container.
+    Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`, `'md'`,
+    `'lg'`, `'xl'`, or a numeric/CSS value.
+    Example: `radius="lg"`.
+striped : bool, optional
+    Description: Alternates row backgrounds for easier scanning.
+    Example: `striped=True`.
+highlightOnHover : bool, optional
+    Description: Highlights the active row on hover.
+    Example: `highlightOnHover=True`.
+withTableBorder : bool, optional
+    Description: Draws an outer table border.
+    Example: `withTableBorder=True`.
+withColumnBorders : bool, optional
+    Description: Draws vertical borders between columns.
+    Example: `withColumnBorders=False`.
+withRowBorders : bool, optional
+    Description: Draws borders between body rows.
+    Example: `withRowBorders=True`.
+height : str | int | float, optional
+    Description: Fixed table height, often used with sticky headers or
+    scrollable layouts.
+    Example: `height=420`.
+minHeight : str | int | float, optional
+    Description: Minimum table height.
+    Example: `minHeight=240`.
+maxHeight : str | int | float, optional
+    Description: Maximum table height before scrolling.
+    Example: `maxHeight=560`.
+horizontalSpacing : str | int | float, optional
+    Description: Horizontal cell padding.
+    Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`, `'md'`,
+    `'lg'`, `'xl'`, or numeric values.
+    Example: `horizontalSpacing="sm"`.
+verticalSpacing : str | int | float, optional
+    Description: Vertical cell padding.
+    Expected inputs: Mantine spacing tokens such as `'xs'`, `'sm'`, `'md'`,
+    `'lg'`, `'xl'`, or numeric values.
+    Example: `verticalSpacing="xs"`.
+verticalAlign : str, optional
+    Description: Vertical alignment for cell content.
+    Expected inputs: `'top'`, `'center'`, `'bottom'`.
+    Example: `verticalAlign="center"`.
+bg : str | dict, optional
+    Description: Mantine background color prop for the table wrapper.
+    Example: `bg="white"`.
+c : str | dict, optional
+    Description: Mantine text color prop for the table wrapper.
+    Example: `c="dark.8"`.
+emptyState : str | dict, optional
+    Description: Content shown when there are no rows to display.
+    Example: `emptyState=dmc.Text("No matching employees")`.
+customLoader : Any, optional
+    Description: Custom loader shown while `fetching=True`.
+    Example: `customLoader=dmc.Loader(color="blue")`.
+noRecordsIcon : Any, optional
+    Description: Icon or component shown beside the empty-state text.
+    Example: `noRecordsIcon=dmc.ThemeIcon("!")`.
+storeColumnsKey : str, optional
+    Description: Local-storage key used to persist draggable, toggleable,
+    or resizable column state in the browser.
+    Example: `storeColumnsKey="employees-columns-v1"`.
+
+Attributes
+----------
+data : list of dict
+    Records rendered by the table. `records` is normalized into this
+    property during initialization.
+columns : list of dict
+    Column configuration currently attached to the table.
+groups : list of dict or None
+    Column-group configuration for grouped headers.
+groupBy : str or list of str or None
+    Active row-grouping accessor or accessors.
+idAccessor : str or dict or list of str
+    Record identity accessor used by selection, expansion, and row rules.
+selectedRecordIds : list
+    Selected record identifiers.
+selectedRecords : list
+    Selected record payloads mirrored from the front end.
+expandedRecordIds : list
+    Expanded row identifiers for `rowExpansion` or grouped child rows.
+sortStatus : dict or None
+    Current sort descriptor used by client-side or server-side sorting.
+searchQuery : str or None
+    Current table search query.
+pagination : dict or None
+    Pagination event payload reported by the component.
+lastSortChange : dict or None
+    Latest sort interaction payload emitted by the component.
+lastSelectionChange : dict or None
+    Latest selection interaction payload emitted by the component.
+lastExpansionChange : dict or None
+    Latest expansion interaction payload emitted by the component.
+lastRowDragChange : dict or None
+    Latest row-drag interaction payload emitted by the component.
+
+Notes
+-----
+The complete constructor keyword surface comes from the generated
+`DataTable.py` component. This wrapper keeps those canonical keywords and
+adds a small set of Python-friendly aliases.
+
+Python-friendly aliases are accepted for a few common props, including
+`records -> data`, `group_by -> groupBy`, `group_aggregations ->
+groupAggregations`, `child_rows_accessor -> childRowsAccessor`, and
+`dir -> direction`.
+
+Mapping-style properties such as `style`, `styles`, `classNames`,
+`tableProps`, and `scrollAreaProps` are merged when updated through the
+fluent helpers instead of being blindly replaced.
+
+Examples
+--------
+>>> table = DataTable(
+...     id="employees",
+...     data=[{"id": 1, "name": "Avery", "team": "Platform", "salary": 128000}],
+...     columns=[
+...         Column("name", title="Employee", sortable=True),
+...         Column("team", sortable=True),
+...         Column("salary", presentation="currency", currency="USD", textAlign="right"),
+...     ],
+...     idAccessor="id",
+...     paginationMode="client",
+...     radius="lg",
+... )
+>>> table.update_columns(selector="name", title="Employee")
+DataTable(...)
+>>> table.update_selection(selectionTrigger="checkbox")
+DataTable(...)
+>>> table.update_rows(selector={"team": "Platform"}, className="team-platform")
+DataTable(...)
+
+
+## Helper Builders
+
+Dictionary factories for readable table configuration.
+
+
+Column(accessor=None, /, *, title=None, presentation=None, sortable=None, editable=None, editor=None, render=None, filter=None, textAlign=None, width=None, cellsStyle=None, titleStyle=None, draggable=None, toggleable=None, resizable=None, defaultToggle=None)
+
+Description
+-----------
+Build a column-definition dictionary for `DataTable(columns=[...])`.
+This helper is the quickest way to create readable column configs from
+Python without manually repeating `{"accessor": ...}` for every column.
+
+Parameters
+----------
+accessor : str | None, optional
+    Description: Record key rendered by the column. This becomes the
+    column identifier used by helpers such as
+    `table.update_columns(selector="salary", ...)`.
+    Example: `Column("salary")`.
+title : str, optional
+    Description: Header label shown above the column. If omitted, the
+    frontend falls back to the accessor or its built-in title formatting.
+    Example: `title="Annual Salary"`.
+presentation : str, optional
+    Description: Built-in display mode used to format cell values.
+    Expected inputs: `'text'`, `'number'`, `'currency'`, `'date'`,
+    `'datetime'`, `'badge'`, `'link'`, `'code'`, `'json'`, `'progress'`.
+    Example: `presentation="currency"`.
+sortable : bool, optional
+    Description: Enables sorting for the column.
+    Example: `sortable=True`.
+editable : bool, optional
+    Description: Enables double-click editing for the column. Pair this
+    with `editor` when you want a custom Dash input component.
+    Example: `editable=True`.
+editor : Any, optional
+    Description: Dash component used as the in-place editor for editable
+    cells.
+    Example: `editor=dmc.NumberInput(min=0, thousandSeparator=",")`.
+render : Any, optional
+    Description: Dash component or renderer payload used for custom cell
+    content.
+    Example: `render=dmc.Text("View", c="blue")`.
+filter : Any, optional
+    Description: Dash component rendered in the column filter popover.
+    Example: `filter=dmc.TextInput(placeholder="Filter names")`.
+textAlign : str, optional
+    Description: Horizontal alignment for cell content.
+    Expected inputs: values accepted by Mantine/DataTable such as
+    `'left'`, `'center'`, `'right'`.
+    Example: `textAlign="right"`.
+width : int | float | str, optional
+    Description: Column width. You can pass a numeric pixel value or a CSS
+    width string.
+    Example: `width=140`.
+cellsStyle : dict, optional
+    Description: Inline style mapping applied to body cells.
+    Example: `cellsStyle={"fontVariantNumeric": "tabular-nums"}`.
+titleStyle : dict, optional
+    Description: Inline style mapping applied to the header cell.
+    Example: `titleStyle={"textTransform": "uppercase"}`.
+draggable : bool, optional
+    Description: Allows the column to participate in column dragging.
+    Example: `draggable=True`.
+toggleable : bool, optional
+    Description: Allows the column to be shown or hidden by column
+    customization controls.
+    Example: `toggleable=True`.
+resizable : bool, optional
+    Description: Allows the column width to be resized by the user.
+    Example: `resizable=True`.
+defaultToggle : bool, optional
+    Description: Initial visibility state used when column toggling is
+    enabled.
+    Example: `defaultToggle=False`.
+
+Returns
+-------
+dict
+    A Dash-safe column configuration dictionary.
+
+Notes
+-----
+The helper does not validate every possible column key. It simply builds a
+plain dictionary, which makes it safe to use with existing Mantine
+DataTable column options and this package's Dash-specific additions.
+
+Examples
+--------
+>>> Column("salary", title="Salary", presentation="currency", currency="USD")
+{'accessor': 'salary', 'title': 'Salary', 'presentation': 'currency', 'currency': 'USD'}
+>>> Column("status", presentation="badge", badgeColorAccessor="statusColor")
+{'accessor': 'status', 'presentation': 'badge', 'badgeColorAccessor': 'statusColor'}
+
+ColumnGroup(group_id=None, /, *, columns=None, groups=None, title=None, style=None, headerStyle=None, textAlign=None)
+
+Description
+-----------
+Build a grouped-header definition for `DataTable(groups=[...])`. Use this
+when you want multiple header rows, such as a "Compensation" group above
+salary and bonus columns.
+
+Parameters
+----------
+group_id : str | None, optional
+    Description: Stable identifier for the group. This is the id you use
+    later with `table.group_columns(selector="compensation", ...)`.
+    Example: `group_id="compensation"`.
+columns : list[Any] | None, optional
+    Description: Column references attached directly to this group. Each
+    item may be an accessor string like `"salary"` or a full column
+    dictionary.
+    Example: `columns=["salary", "bonus"]`.
+groups : list[dict[str, Any]] | None, optional
+    Description: Nested child groups for multi-row grouped headers.
+    Example: `groups=[ColumnGroup("cash", columns=["salary", "bonus"])]`.
+title : str, optional
+    Description: Visible header label for the group.
+    Example: `title="Compensation"`.
+style : dict, optional
+    Description: Inline style mapping applied to the group header cell.
+    Example: `style={"textAlign": "center"}`.
+headerStyle : dict, optional
+    Description: Header-specific style mapping forwarded to the frontend.
+    Example: `headerStyle={"backgroundColor": "var(--mantine-color-gray-0)"}`.
+textAlign : str, optional
+    Description: Alignment hint for grouped-header content.
+    Expected inputs: values accepted by Mantine/DataTable such as
+    `'left'`, `'center'`, `'right'`.
+    Example: `textAlign="center"`.
+
+Returns
+-------
+dict
+    A grouped-header configuration dictionary.
+
+Notes
+-----
+Group dictionaries are plain Python objects, so they can be freely mixed
+with `Column(...)` output and raw dictionaries in the same `groups` list.
+
+Examples
+--------
+>>> ColumnGroup("profile", title="Profile", columns=["name", "team"])
+{'id': 'profile', 'columns': ['name', 'team'], 'title': 'Profile'}
+
+SelectionConfig(*, selectionTrigger=None, selectedRecordIds=None, selectedRecords=None, selectableRowRules=None, disabledSelectionRowRules=None, selectionCheckboxRules=None, selectionCheckboxProps=None, allRecordsSelectionCheckboxProps=None, selectionColumnClassName=None, selectionColumnStyle=None)
+
+Description
+-----------
+Build a compact selection configuration dictionary that you can unpack into
+`DataTable(...)` or pass to `table.update_selection(...)`.
+
+Parameters
+----------
+selectionTrigger : str, optional
+    Description: Enables row selection and decides how it is triggered.
+    Expected inputs: `'cell'`, `'checkbox'`.
+    Example: `selectionTrigger="checkbox"`.
+selectedRecordIds : list[Any], optional
+    Description: Controlled list of selected row ids.
+    Example: `selectedRecordIds=[1, 4, 8]`.
+selectedRecords : list[dict], optional
+    Description: Controlled list of selected record payloads.
+    Example: `selectedRecords=[{"id": 1, "name": "Avery"}]`.
+selectableRowRules : bool | dict | list, optional
+    Description: Rule definition that marks which rows are selectable.
+    Example: `selectableRowRules=[{"selector": {"status": "Active"}, "value": True}]`.
+disabledSelectionRowRules : bool | dict | list, optional
+    Description: Rule definition that disables row selection for matching
+    rows.
+    Example: `disabledSelectionRowRules=[{"selector": {"archived": True}, "value": True}]`.
+selectionCheckboxRules : dict | list, optional
+    Description: Conditional checkbox props for the selection column.
+    Example: `selectionCheckboxRules=[{"selector": {"locked": True}, "value": {"disabled": True}}]`.
+selectionCheckboxProps : dict, optional
+    Description: Shared props for each row-selection checkbox.
+    Example: `selectionCheckboxProps={"size": "sm"}`.
+allRecordsSelectionCheckboxProps : dict, optional
+    Description: Props for the "select all" checkbox in the header.
+    Example: `allRecordsSelectionCheckboxProps={"aria-label": "Select all rows"}`.
+selectionColumnClassName : str, optional
+    Description: CSS class applied to the selection column.
+    Example: `selectionColumnClassName="table-selection-col"`.
+selectionColumnStyle : dict, optional
+    Description: Inline style mapping applied to the selection column.
+    Example: `selectionColumnStyle={"width": 44}`.
+
+Returns
+-------
+dict
+    A dictionary with `None` values removed.
+
+Notes
+-----
+This helper is a convenience for building clean config objects. It does
+not mutate a table and it drops keys whose value is `None`.
+
+Examples
+--------
+>>> SelectionConfig(selectionTrigger="checkbox", selectedRecordIds=[1, 2])
+{'selectionTrigger': 'checkbox', 'selectedRecordIds': [1, 2]}
+
+PaginationConfig(*, page=None, pageSize=None, recordsPerPage=None, totalRecords=None, recordsPerPageOptions=None, pageSizeOptions=None, recordsPerPageLabel=None, paginationSize=None, paginationActiveTextColor=None, paginationActiveBackgroundColor=None, paginationWithEdges=None, paginationWithControls=None)
+
+Description
+-----------
+Build a compact pagination configuration dictionary for client-side or
+server-side paging.
+
+Parameters
+----------
+page : int | float, optional
+    Description: Current page number in controlled pagination mode.
+    Example: `page=1`.
+pageSize : int | float, optional
+    Description: Number of rows shown per page when using the `pageSize`
+    prop.
+    Example: `pageSize=25`.
+recordsPerPage : int | float, optional
+    Description: Preferred page-size prop matching Mantine DataTable's API.
+    Example: `recordsPerPage=25`.
+totalRecords : int | float, optional
+    Description: Total number of records available, typically required for
+    server-side pagination.
+    Example: `totalRecords=248`.
+recordsPerPageOptions : list[int | float], optional
+    Description: Page-size choices shown in the footer control.
+    Example: `recordsPerPageOptions=[10, 25, 50, 100]`.
+pageSizeOptions : list[int | float], optional
+    Description: Alternative page-size options prop.
+    Example: `pageSizeOptions=[10, 25, 50]`.
+recordsPerPageLabel : str, optional
+    Description: Label shown next to the page-size selector.
+    Example: `recordsPerPageLabel="Rows"`.
+paginationSize : str | int | float, optional
+    Description: Visual size of the pagination controls.
+    Expected inputs: Mantine size tokens such as `'xs'`, `'sm'`, `'md'`,
+    `'lg'`, `'xl'`, or a numeric size when supported.
+    Example: `paginationSize="sm"`.
+paginationActiveTextColor : str | dict, optional
+    Description: Text color for the active page button.
+    Example: `paginationActiveTextColor="white"`.
+paginationActiveBackgroundColor : str | dict, optional
+    Description: Background color for the active page button.
+    Example: `paginationActiveBackgroundColor="blue.6"`.
+paginationWithEdges : bool, optional
+    Description: Shows first/last page controls when `True`.
+    Example: `paginationWithEdges=True`.
+paginationWithControls : bool, optional
+    Description: Shows previous/next controls when `True`.
+    Example: `paginationWithControls=True`.
+
+Returns
+-------
+dict
+    A dictionary with `None` values removed.
+
+Notes
+-----
+For most apps you will set either `recordsPerPage` or `pageSize`, not
+both. This helper simply forwards whatever keys you provide.
+
+Examples
+--------
+>>> PaginationConfig(page=2, recordsPerPage=25, totalRecords=240)
+{'page': 2, 'recordsPerPage': 25, 'totalRecords': 240}
+
+RowExpansionConfig(content=None, /, *, allowMultiple=None, trigger=None)
+
+Description
+-----------
+Build a row-expansion configuration dictionary for detail panels shown
+beneath a record.
+
+Parameters
+----------
+content : Any, optional
+    Description: Dash component or payload rendered when a row is expanded.
+    Example: `content=dmc.Text("Employee details")`.
+allowMultiple : bool, optional
+    Description: Allows multiple rows to stay expanded at the same time.
+    Example: `allowMultiple=True`.
+trigger : str, optional
+    Description: Chooses how expansion is toggled.
+    Expected inputs: frontend-supported trigger values such as `'click'`
+    when available.
+    Example: `trigger="click"`.
+
+Returns
+-------
+dict
+    A dictionary with `None` values removed.
+
+Notes
+-----
+This helper is especially useful when you want to keep expansion config in
+one place and reuse it across multiple table instances.
+
+Examples
+--------
+>>> RowExpansionConfig(content="More details", allowMultiple=True)
+{'allowMultiple': True, 'content': 'More details'}
+
+
+----------------------------------------------------------------------
+This is the User Guide documentation for the package.
+----------------------------------------------------------------------
+
+# Getting Started
+
+Install the package from PyPI:
+
+```bash
+pip install dash-mantine-datatable
+```
+
+Then create a small Dash app:
+
+```python
+from dash import Dash
+import dash_mantine_components as dmc
+import dash_mantine_datatable as dmdt
+
+app = Dash()
+
+app.layout = dmc.MantineProvider(
+    dmdt.DataTable(
+        id="employees",
+        data=[
+            {"id": 1, "name": "Avery Stone", "team": "Platform", "status": "On Track"},
+            {"id": 2, "name": "Mina Patel", "team": "Growth", "status": "Planning"},
+        ],
+        columns=[
+            dmdt.Column("name", title="Name", sortable=True),
+            dmdt.Column("team", title="Team", sortable=True),
+            dmdt.Column("status", title="Status", presentation="badge"),
+        ],
+    ).update_layout(radius="lg", withTableBorder=True, striped=True)
+)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+Use the API reference when you need the complete constructor and helper-method
+surface. Use the recipes when you want copy-pasteable patterns pulled from the
+interactive `usage.py` demo.
+

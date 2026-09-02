@@ -1,0 +1,32 @@
+{
+  "Column": {
+    "url": "https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\\__init__.py#L263-L357",
+    "file": "C:\\Users\\galli\\Documents\\GitHub\\Repositories\\dash-mantine-datatable\\dash_mantine_datatable\\__init__.py",
+    "start_line": 263,
+    "end_line": 357
+  },
+  "ColumnGroup": {
+    "url": "https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\\__init__.py#L360-L427",
+    "file": "C:\\Users\\galli\\Documents\\GitHub\\Repositories\\dash-mantine-datatable\\dash_mantine_datatable\\__init__.py",
+    "start_line": 360,
+    "end_line": 427
+  },
+  "SelectionConfig": {
+    "url": "https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\\__init__.py#L430-L487",
+    "file": "C:\\Users\\galli\\Documents\\GitHub\\Repositories\\dash-mantine-datatable\\dash_mantine_datatable\\__init__.py",
+    "start_line": 430,
+    "end_line": 487
+  },
+  "PaginationConfig": {
+    "url": "https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\\__init__.py#L490-L555",
+    "file": "C:\\Users\\galli\\Documents\\GitHub\\Repositories\\dash-mantine-datatable\\dash_mantine_datatable\\__init__.py",
+    "start_line": 490,
+    "end_line": 555
+  },
+  "RowExpansionConfig": {
+    "url": "https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\\__init__.py#L558-L597",
+    "file": "C:\\Users\\galli\\Documents\\GitHub\\Repositories\\dash-mantine-datatable\\dash_mantine_datatable\\__init__.py",
+    "start_line": 558,
+    "end_line": 597
+  }
+}

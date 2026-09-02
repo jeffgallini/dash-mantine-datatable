@@ -1,0 +1,181 @@
+project:
+  type: website
+  post-render: scripts/post-render.py
+  resources:
+    - github-widget.js
+    - sidebar-filter.js
+    - sidebar-wrap.js
+    - sidebar-float.js
+    - dark-mode-toggle.js
+    - theme-init.js
+    - copy-code.js
+    - tooltips.js
+    - color-swatch.js
+    - mermaid-renderer.js
+    - responsive-tables.js
+    - video-embed.js
+    - navbar-widgets.js
+    - details.js
+    - copy-page.js
+    - back-to-top.js
+    - on-this-page.js
+    - keyboard-nav.js
+    - skill.md
+    - ".well-known/**"
+    - navbar-style.js
+    - content-style.js
+    - assets/**
+  render:
+    - "**"
+    - "!skill.md"
+    - "!.well-known/**"
+format:
+  html:
+    theme:
+      - flatly
+      - great-docs.scss
+    toc: true
+    toc-depth: 2
+    toc-title: On this page
+    code-copy: false
+    mermaid:
+      theme: default
+    shift-heading-level-by: -1
+    include-in-header:
+      - text: "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">"
+      - text: "<script src=\"theme-init.js\"></script>"
+      - text: "<meta name=\"gd-navbar-style\" data-preset=\"sky\">"
+      - text: "<meta name=\"gd-content-style\" data-preset=\"lilac\" data-pages=\"all\">"
+    include-after-body:
+      - text: "<script src=\"github-widget.js\"></script>"
+      - text: "<script src=\"copy-page.js\"></script>"
+      - text: "<script src=\"sidebar-wrap.js\"></script>"
+      - text: "<script>(function(){var s=document.createElement('script');var m=document.querySelector('meta[name=\"quarto:offset\"]');s.src=(m?m.content:'')+'sidebar-float.js';document.body.appendChild(s);})();</script>"
+      - text: "<script src=\"sidebar-filter.js\"></script>"
+      - text: "<script src=\"dark-mode-toggle.js\"></script>"
+      - text: "<script src=\"back-to-top.js\"></script>"
+      - text: "<script>(function(){var s=document.createElement('script');var m=document.querySelector('meta[name=\"quarto:offset\"]');s.src=(m?m.content:'')+'on-this-page.js';document.body.appendChild(s);})();</script>"
+      - text: "<script src=\"keyboard-nav.js\"></script>"
+      - text: "<script src=\"copy-code.js\"></script>"
+      - text: "<script src=\"details.js\"></script>"
+      - text: "<script src=\"mermaid-renderer.js\"></script>"
+      - text: "<script src=\"tooltips.js\"></script>"
+      - text: "<script>(function(){var s=document.createElement('script');s.src=(document.querySelector('link[rel=\"canonical\"]')||{href:location.href}).href.replace(/\\/[^\\/]*$/,'').replace(/\\/[^\\/]*$/,'')+'/color-swatch.js';var h=document.currentScript;h.parentNode.insertBefore(s,h.nextSibling);})()</script>"
+      - text: "<script src=\"responsive-tables.js\"></script>"
+      - text: "<script src=\"video-embed.js\"></script>"
+      - text: "<script src=\"navbar-widgets.js\"></script>"
+      - text: "<script src=\"navbar-style.js\"></script>"
+      - text: "<script src=\"content-style.js\"></script>"
+      - text: "<script>(function(){var s=document.createElement('script');s.src=(document.querySelector('link[rel=\"canonical\"]')||{href:location.href}).href.replace(/\\/[^\\/]*$/,'').replace(/\\/[^\\/]*$/,'')+'/color-swatch.js';var h=document.currentScript;h.parentNode.insertBefore(s,h.nextSibling);})()</script>"
+website:
+  page-navigation: true
+  title: Dash Mantine DataTable
+  navbar:
+    left:
+      - text: User Guide
+        href: user-guide/getting-started.qmd
+      - text: Recipes
+        href: recipes/index.qmd
+      - text: Reference
+        href: reference/index.qmd
+    right:
+      - text: "<div id=\"github-widget\" data-owner=\"jeffgallini\" data-repo=\"dash-mantine-datatable\"></div>"
+  sidebar:
+    - id: reference
+      contents:
+        - text: API Index
+          href: reference/index.qmd
+        - section: Component
+          contents:
+            - reference/DataTable.qmd
+        - section: Helper Builders
+          contents:
+            - reference/Column.qmd
+            - reference/ColumnGroup.qmd
+            - reference/SelectionConfig.qmd
+            - reference/PaginationConfig.qmd
+            - reference/RowExpansionConfig.qmd
+    - id: user-guide
+      title: User Guide
+      contents:
+        - user-guide/getting-started.qmd
+    - id: recipes
+      title: Recipes
+      contents:
+        - text: Recipes
+          href: recipes/index.qmd
+        - text: Basic Formatting
+          href: recipes/basic-formatting.qmd
+        - text: Client-side Selection
+          href: recipes/client-side-selection.qmd
+        - text: Row Expansion
+          href: recipes/row-expansion.qmd
+        - text: Nested Tables
+          href: recipes/nested-tables.qmd
+        - text: Async Nested Tables
+          href: recipes/async-nested-tables.qmd
+        - text: Server Pagination and Sorting
+          href: recipes/server-pagination-sorting.qmd
+        - text: Empty and Loading States
+          href: recipes/empty-loading-states.qmd
+        - text: Fixed-height Scrolling
+          href: recipes/fixed-height-scrolling.qmd
+        - text: Infinite Scrolling
+          href: recipes/infinite-scrolling.qmd
+        - text: Table Properties
+          href: recipes/table-properties.qmd
+        - text: Column Properties
+          href: recipes/column-properties.qmd
+        - text: Column Filtering
+          href: recipes/column-filtering.qmd
+        - text: Column Dragging
+          href: recipes/column-dragging.qmd
+        - text: Column Resizing
+          href: recipes/column-resizing.qmd
+        - text: Column Grouping
+          href: recipes/column-grouping.qmd
+        - text: Row Properties
+          href: recipes/row-properties.qmd
+        - text: Row Dragging
+          href: recipes/row-dragging.qmd
+        - text: Row IDs
+          href: recipes/row-ids.qmd
+        - text: Row and Cell Clicks
+          href: recipes/row-and-cell-clicks.qmd
+        - text: Inline Editing
+          href: recipes/inline-editing.qmd
+        - text: RTL Support
+          href: recipes/rtl-support.qmd
+        - text: Advanced Controls
+          href: recipes/advanced-controls.qmd
+        - text: Stock Portfolio
+          href: recipes/stock-portfolio.qmd
+        - text: Custom Components
+          href: recipes/custom-components.qmd
+  page-footer:
+    center: Developed by <strong>Jeff&nbsp;Gallini</strong>.<br>Site created with <strong>Great&nbsp;Docs</strong>.
+filters:
+  - output-title
+  - details
+jupyter: python3
+api-reference:
+  package: dash_mantine_datatable
+  dir: reference
+  title: Reference
+  desc: "The Python API centers on the Dash DataTable component, small dictionary builders for common nested props, and fluent methods for updating table behavior in place."
+  dynamic: false
+  parser: numpy
+  sections:
+    - title: Component
+      desc: Main generated Dash component.
+      contents:
+        - name: DataTable
+          members: []
+    - title: Helper Builders
+      desc: Dictionary factories for readable table configuration.
+      contents:
+        - Column
+        - ColumnGroup
+        - SelectionConfig
+        - PaginationConfig
+        - RowExpansionConfig

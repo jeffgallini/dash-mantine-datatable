@@ -1,0 +1,104 @@
+---
+title: "[SelectionConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [SelectionConfig()]{.doc-object-name .doc-function .doc-label .doc-label-function}
+
+::: {.doc-subject}
+
+:::
+
+::: {.doc-usage-source}
+Usage
+
+[Source](https://github.com/jeffgallini/dash-mantine-datatable/blob/main/dash_mantine_datatable\__init__.py#L430-L487){target="_blank" rel="noopener"}
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```python
+SelectionConfig(**kwargs)
+```
+:::
+
+## Description {.doc-description}
+
+Build a compact selection configuration dictionary that you can unpack into
+`DataTable(...)` or pass to `table.update_selection(...)`.
+
+## Parameters {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[selectionTrigger]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: Enables row selection and decides how it is triggered.
+    Expected inputs: `'cell'`, `'checkbox'`.
+    Example: `selectionTrigger="checkbox"`.
+
+<code>[selectedRecordIds]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[Any]]{.doc-parameter-annotation}</code>
+
+:   Description: Controlled list of selected row ids.
+    Example: `selectedRecordIds=[1, 4, 8]`.
+
+<code>[selectedRecords]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [list[dict]]{.doc-parameter-annotation}</code>
+
+:   Description: Controlled list of selected record payloads.
+    Example: `selectedRecords=[{"id": 1, "name": "Avery"}]`.
+
+<code>[selectableRowRules]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool | dict | list]{.doc-parameter-annotation}</code>
+
+:   Description: Rule definition that marks which rows are selectable.
+    Example: `selectableRowRules=[{"selector": {"status": "Active"}, "value": True}]`.
+
+<code>[disabledSelectionRowRules]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [bool | dict | list]{.doc-parameter-annotation}</code>
+
+:   Description: Rule definition that disables row selection for matching
+    rows.
+    Example: `disabledSelectionRowRules=[{"selector": {"archived": True}, "value": True}]`.
+
+<code>[selectionCheckboxRules]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict | list]{.doc-parameter-annotation}</code>
+
+:   Description: Conditional checkbox props for the selection column.
+    Example: `selectionCheckboxRules=[{"selector": {"locked": True}, "value": {"disabled": True}}]`.
+
+<code>[selectionCheckboxProps]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Shared props for each row-selection checkbox.
+    Example: `selectionCheckboxProps={"size": "sm"}`.
+
+<code>[allRecordsSelectionCheckboxProps]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Props for the "select all" checkbox in the header.
+    Example: `allRecordsSelectionCheckboxProps={"aria-label": "Select all rows"}`.
+
+<code>[selectionColumnClassName]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [str]{.doc-parameter-annotation}</code>
+
+:   Description: CSS class applied to the selection column.
+    Example: `selectionColumnClassName="table-selection-col"`.
+
+<code>[selectionColumnStyle]{.doc-parameter-name}[:]{.doc-parameter-annotation-sep} [dict]{.doc-parameter-annotation}</code>
+
+:   Description: Inline style mapping applied to the selection column.
+    Example: `selectionColumnStyle={"width": 44}`.
+:::
+
+## Returns {.doc-returns}
+
+::: {.doc-definition-items}
+<code> [dict]{.doc-parameter-annotation}</code>
+
+:   A dictionary with `None` values removed.
+:::
+
+## Notes {.doc-notes}
+
+This helper is a convenience for building clean config objects. It does
+not mutate a table and it drops keys whose value is `None`.
+
+## Examples {.doc-examples}
+
+```python
+>>> SelectionConfig(selectionTrigger="checkbox", selectedRecordIds=[1, 2])
+{'selectionTrigger': 'checkbox', 'selectedRecordIds': [1, 2]}
+```

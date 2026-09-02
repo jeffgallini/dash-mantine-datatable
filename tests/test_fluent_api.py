@@ -201,10 +201,15 @@ def test_update_columns_supports_dmc_filter_components():
                 label="Default filter",
             )
         )
+    ).update_filters(
+        filter_mode="server",
+        filter_values={"name": "Avery"},
     )
 
     props = table.to_plotly_json()["props"]
 
+    assert props["filterMode"] == "server"
+    assert props["filterValues"] == {"name": "Avery"}
     assert props["columns"][0]["filtering"] is True
     assert props["columns"][0]["filterPopoverProps"] == {"width": 280}
     assert props["columns"][0]["filter"].to_plotly_json()["props"]["id"] == "name-filter"
@@ -213,8 +218,8 @@ def test_update_columns_supports_dmc_filter_components():
         props["defaultColumnProps"]["filter"].to_plotly_json()["props"]["id"]
         == "default-filter"
     )
-    assert "columns[].filter" in dmdt.DataTable._children_props
-    assert "defaultColumnProps.filter" in dmdt.DataTable._children_props
+    assert "columns[].filter" not in dmdt.DataTable._children_props
+    assert "defaultColumnProps.filter" not in dmdt.DataTable._children_props
 
 
 def test_group_columns_builds_groups_from_existing_columns():
@@ -339,15 +344,15 @@ def test_column_helper_and_default_column_render_are_dash_safe():
 
     assert props["columns"][0] == {"accessor": "name"}
     assert props["defaultColumnProps"] == {"textAlign": "right", "ellipsis": True}
-    assert (
-        props["defaultColumnRender"].to_plotly_json()["props"]["children"] == "{name}"
-    )
-    assert (
-        props["defaultColumnRender"].to_plotly_json()["props"]["id"]
-        == {"type": "cell", "id": "{id}"}
-    )
-    assert "columns[].render" in dmdt.DataTable._children_props
-    assert "defaultColumnRender" in dmdt.DataTable._children_props
+    assert props["defaultColumnRender"]["props"]["children"] == "{name}"
+    assert props["defaultColumnRender"]["props"]["id"] == {
+        "type": "cell",
+        "id": "{id}",
+    }
+    # Per-row templates stay dry so DataTable can materialize them itself.
+    assert "columns[].render" not in dmdt.DataTable._children_props
+    assert "defaultColumnRender" not in dmdt.DataTable._children_props
+    assert "emptyState" not in dmdt.DataTable._children_props
 
 
 def test_empty_state_supports_top_level_dash_components():
@@ -360,10 +365,11 @@ def test_empty_state_supports_top_level_dash_components():
 
     props = table.to_plotly_json()["props"]
 
-    assert props["emptyState"].to_plotly_json()["props"]["children"] == "Nothing here"
-    assert props["emptyState"].to_plotly_json()["props"]["id"] == "empty-shell"
-    assert "emptyState" in dmdt.DataTable._children_props
-    assert "emptyState" in dmdt.DataTable._base_nodes
+    assert props["emptyState"]["props"]["children"] == "Nothing here"
+    assert props["emptyState"]["props"]["id"] == "empty-shell"
+    assert props["emptyState"]["type"] == "Div"
+    assert "emptyState" not in dmdt.DataTable._children_props
+    assert "emptyState" not in dmdt.DataTable._base_nodes
 
 
 def test_custom_loader_no_records_icon_and_sort_icons_are_dash_safe():
@@ -380,19 +386,16 @@ def test_custom_loader_no_records_icon_and_sort_icons_are_dash_safe():
 
     props = table.to_plotly_json()["props"]
 
-    assert props["customLoader"].to_plotly_json()["props"]["id"] == "loader-shell"
-    assert props["noRecordsIcon"].to_plotly_json()["props"]["id"] == "empty-icon-shell"
-    assert props["sortIcons"]["sorted"].to_plotly_json()["props"]["id"] == "sorted-icon"
-    assert (
-        props["sortIcons"]["unsorted"].to_plotly_json()["props"]["id"]
-        == "unsorted-icon"
-    )
-    assert "customLoader" in dmdt.DataTable._children_props
-    assert "customLoader" in dmdt.DataTable._base_nodes
-    assert "noRecordsIcon" in dmdt.DataTable._children_props
-    assert "noRecordsIcon" in dmdt.DataTable._base_nodes
-    assert "sortIcons.sorted" in dmdt.DataTable._children_props
-    assert "sortIcons.unsorted" in dmdt.DataTable._children_props
+    assert props["customLoader"]["props"]["id"] == "loader-shell"
+    assert props["noRecordsIcon"]["props"]["id"] == "empty-icon-shell"
+    assert props["sortIcons"]["sorted"]["props"]["id"] == "sorted-icon"
+    assert props["sortIcons"]["unsorted"]["props"]["id"] == "unsorted-icon"
+    assert "customLoader" not in dmdt.DataTable._children_props
+    assert "customLoader" not in dmdt.DataTable._base_nodes
+    assert "noRecordsIcon" not in dmdt.DataTable._children_props
+    assert "noRecordsIcon" not in dmdt.DataTable._base_nodes
+    assert "sortIcons.sorted" not in dmdt.DataTable._children_props
+    assert "sortIcons.unsorted" not in dmdt.DataTable._children_props
 
 
 def test_update_rows_supports_conditional_rules_and_composite_ids():
@@ -788,3 +791,51 @@ def test_update_layout_supports_additional_mantine_style_props():
     assert props["bottom"] == 0
     assert props["right"] == "auto"
     assert props["inset"] == "unset"
+
+
+def test_column_templates_are_not_dash_children_props():
+    """Template slots must stay dry so DataTable can materialize them safely."""
+
+    children_props = set(dmdt.DataTable._children_props)
+
+    assert "columns[].render" not in children_props
+    assert "columns[].editor" not in children_props
+    assert "columns[].footer" not in children_props
+    assert "defaultColumnProps.render" not in children_props
+    assert "defaultColumnProps.editor" not in children_props
+    assert "defaultColumnProps.footer" not in children_props
+    assert "defaultColumnRender" not in children_props
+    assert "customLoader" not in children_props
+    assert "emptyState" not in children_props
+    assert "noRecordsIcon" not in children_props
+    assert "sortIcons.sorted" not in children_props
+    assert "sortIcons.unsorted" not in children_props
+    assert children_props == set()
+
+
+def test_column_render_templates_stay_dry_components():
+    table = dmdt.DataTable(
+        data=[{"id": 1, "name": "Avery", "status": "On Track"}],
+        columns=[
+            {
+                "accessor": "name",
+                "render": dmc.Text("{name}", fw=700),
+            },
+            {
+                "accessor": "status",
+                "editor": dmc.TextInput(value="{status}"),
+                "footer": dmc.Text("footer"),
+            },
+        ],
+    )
+
+    props = table.to_plotly_json()["props"]
+    name_render = props["columns"][0]["render"].to_plotly_json()
+    status_editor = props["columns"][1]["editor"].to_plotly_json()
+    status_footer = props["columns"][1]["footer"].to_plotly_json()
+
+    assert name_render["type"] == "Text"
+    assert name_render["namespace"] == "dash_mantine_components"
+    assert name_render["props"]["children"] == "{name}"
+    assert status_editor["type"] == "TextInput"
+    assert status_footer["type"] == "Text"

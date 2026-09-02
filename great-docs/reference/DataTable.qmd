@@ -1,0 +1,19 @@
+---
+title: "[DataTable]{.doc-object-name .doc-module .doc-label .doc-label-module}"
+body-classes: doc-api-page
+page-navigation: false
+---
+
+# [DataTable]{.doc-object-name .doc-module .doc-label .doc-label-module}
+
+::: {.doc-signature .doc-module}
+`DataTable`
+:::
+
+::: {.doc-usage-source}
+Usage
+:::
+
+::: {.doc-subject}
+
+:::

@@ -142,4 +142,23 @@
     .dash-mantine-datatable-editable-dropdown > * {
         width: 100%;
     }
+
+    /* Keep minHeight on the wrapper from stretching body rows. */
+    .dash-mantine-datatable-root > .mantine-datatable {
+        flex: 0 0 auto;
+    }
+
+    /* Empty/loading overlays are absolutely positioned; fill the wrapper so
+       noRecords/emptyState text can center inside the configured minHeight. */
+    .dash-mantine-datatable-root:has(.mantine-datatable-empty-state[data-active])
+        > .mantine-datatable,
+    .dash-mantine-datatable-root:has(.mantine-datatable-loader-background)
+        > .mantine-datatable {
+        flex: 1 1 auto;
+        min-height: 100%;
+    }
+
+    .dash-mantine-datatable-root .mantine-datatable-table tbody tr {
+        height: auto;
+    }
 }

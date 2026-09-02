@@ -1,0 +1,8 @@
+.dmdt-row-review td {
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+
+.dmdt-row-review td:first-child {
+    box-shadow: inset 3px 0 0 var(--mantine-color-orange-5);
+}

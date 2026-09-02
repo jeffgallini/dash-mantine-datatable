@@ -4,13 +4,10 @@ import typing  # noqa: F401
 from typing_extensions import TypedDict, NotRequired, Literal # noqa: F401
 from dash.development.base_component import Component, _explicitize_args
 
+ComponentSingleType = typing.Union[str, int, float, Component, None]
 ComponentType = typing.Union[
-    str,
-    int,
-    float,
-    Component,
-    None,
-    typing.Sequence[typing.Union[str, int, float, Component, None]],
+    ComponentSingleType,
+    typing.Sequence[ComponentSingleType],
 ]
 
 NumberType = typing.Union[
@@ -63,8 +60,8 @@ Keyword arguments:
 
 - childRowsAccessor (string; default undefined):
     Nested child-record accessor for already hierarchical data. When
-    set, rows with this accessor render inline child rows using the
-    same indentation and expand/collapse affordance as `groupBy`.
+    set,  rows with this accessor render inline child rows using the
+    same  indentation and expand/collapse affordance as `groupBy`.
 
 - className (string; optional)
 
@@ -73,7 +70,7 @@ Keyword arguments:
 - columns (list of dicts; optional):
     Column definitions. Each column may also define a Dash-friendly
     `presentation` such as `text`, `number`, `currency`, `date`,
-    `datetime`, `badge`, `link`, `code`, `json` or `progress`. Set
+    `datetime`, `badge`, `link`, `code`, `json` or `progress`.  Set
     `editable=True` to enable double-click editing, and pass a Dash
     input component to `editor` when you want a custom in-place
     editor.
@@ -89,7 +86,7 @@ Keyword arguments:
 
 - direction (a value equal to: 'ltr', 'rtl'; default 'ltr'):
     Layout direction. Set to `rtl` to render the table in a
-    right-to-left Mantine direction context.
+    right-to-left  Mantine direction context.
 
 - disabledSelectionRowRules (boolean | dict | list; optional)
 
@@ -103,6 +100,10 @@ Keyword arguments:
 
 - ff (string; optional)
 
+- filterMode (a value equal to: 'client', 'server', 'none'; default 'client')
+
+- filterValues (dict; optional)
+
 - flex (string | number; optional)
 
 - fs (string; optional)
@@ -113,14 +114,14 @@ Keyword arguments:
 
 - groupAggregations (dict; default undefined):
     Per-column aggregation mapping for parent rows. Values may be one
-    of the built-in aggregations (`sum`, `mean`, `median`, `min`,
-    `max`, `count`) or a custom client-side function / function source
-    string.
+    of the  built-in aggregations (`sum`, `mean`, `median`, `min`,
+    `max`, `count`) or  a custom client-side function / function
+    source string.
 
 - groupBy (string | list of strings; default undefined):
     Row grouping accessor or accessors. Grouped rows render inline
-    nested parents inside a single table, while leaf rows can still
-    use `rowExpansion` for detail panels.
+    nested  parents inside a single table, while leaf rows can still
+    use  `rowExpansion` for detail panels.
 
 - groups (list of dicts; default undefined):
     Optional column groups matching Mantine DataTable grouped headers.
@@ -143,6 +144,8 @@ Keyword arguments:
 - inset (string | number; optional)
 
 - lastExpansionChange (dict; optional)
+
+- lastFilterChange (dict; optional)
 
 - lastRowDragChange (dict; optional)
 
@@ -289,8 +292,8 @@ Keyword arguments:
 
 - rowDragging (boolean | dict; optional):
     Enables Dash-native row reordering. Pass `True` or a configuration
-    object. The reordered list is written back to both `data` and
-    `records`, and the latest drag payload is exposed through
+    object.  The reordered list is written back to both `data` and
+    `records`, and the  latest drag payload is exposed through
     `lastRowDragChange`.
 
 - rowExpansion (dict; optional)
@@ -340,8 +343,8 @@ Keyword arguments:
 - stickyHeaderOffset (string | number; optional)
 
 - storeColumnsKey (string; optional):
-    Local-storage key used by Mantine DataTable to persist draggable /
-    toggleable / resizable column state.
+    Local-storage key used by Mantine DataTable to persist  draggable
+    / toggleable / resizable column state.
 
 - striped (boolean; default False)
 
@@ -380,7 +383,7 @@ Keyword arguments:
 - withRowBorders (boolean; default True)
 
 - withTableBorder (boolean; default True)"""
-    _children_props = []
+    _children_props: typing.List[str] = []
     _base_nodes = ['children']
     _namespace = 'dash_mantine_datatable'
     _type = 'DataTable'
@@ -402,8 +405,10 @@ Keyword arguments:
         paginationMode: typing.Optional[Literal["client", "server", "none"]] = None,
         sortMode: typing.Optional[Literal["client", "server"]] = None,
         searchMode: typing.Optional[Literal["client", "server"]] = None,
+        filterMode: typing.Optional[Literal["client", "server", "none"]] = None,
         searchQuery: typing.Optional[str] = None,
         searchableAccessors: typing.Optional[typing.Sequence[str]] = None,
+        filterValues: typing.Optional[dict] = None,
         page: typing.Optional[NumberType] = None,
         recordsPerPage: typing.Optional[NumberType] = None,
         pageSize: typing.Optional[NumberType] = None,
@@ -440,6 +445,7 @@ Keyword arguments:
         lastSortChange: typing.Optional[dict] = None,
         lastSelectionChange: typing.Optional[dict] = None,
         lastExpansionChange: typing.Optional[dict] = None,
+        lastFilterChange: typing.Optional[dict] = None,
         emptyState: typing.Optional[typing.Union[str, dict]] = None,
         noRecordsIcon: typing.Optional[typing.Any] = None,
         noRecordsText: typing.Optional[str] = None,
@@ -550,9 +556,9 @@ Keyword arguments:
         visibleFrom: typing.Optional[str] = None,
         **kwargs
     ):
-        self._prop_names = ['id', 'allRecordsSelectionCheckboxProps', 'backgroundColor', 'bd', 'bdrs', 'bg', 'bga', 'bgp', 'bgr', 'bgsz', 'bodyRef', 'borderColor', 'borderRadius', 'bottom', 'c', 'cellClick', 'cellContextMenu', 'cellDoubleClick', 'childRowsAccessor', 'className', 'classNames', 'columns', 'customLoader', 'data', 'defaultColumnProps', 'defaultColumnRender', 'direction', 'disabledSelectionRowRules', 'display', 'emptyState', 'expandedRecordIds', 'fetching', 'ff', 'flex', 'fs', 'fw', 'fz', 'groupAggregations', 'groupBy', 'groups', 'h', 'height', 'hiddenFrom', 'highlightOnHover', 'highlightOnHoverColor', 'horizontalSpacing', 'idAccessor', 'inset', 'lastExpansionChange', 'lastRowDragChange', 'lastSelectionChange', 'lastSortChange', 'left', 'lh', 'loaderBackgroundBlur', 'loaderColor', 'loaderSize', 'loaderType', 'loadingText', 'locale', 'lts', 'm', 'mah', 'maw', 'maxHeight', 'mb', 'me', 'mih', 'minHeight', 'miw', 'ml', 'mr', 'ms', 'mt', 'mx', 'my', 'noHeader', 'noRecordsIcon', 'noRecordsText', 'opacity', 'p', 'page', 'pageSize', 'pageSizeOptions', 'pagination', 'paginationActiveBackgroundColor', 'paginationActiveTextColor', 'paginationMode', 'paginationSize', 'paginationWithControls', 'paginationWithEdges', 'pb', 'pe', 'pinFirstColumn', 'pinLastColumn', 'pl', 'pos', 'pr', 'ps', 'pt', 'px', 'py', 'radius', 'records', 'recordsPerPage', 'recordsPerPageLabel', 'recordsPerPageOptions', 'right', 'rowAttributes', 'rowBackgroundColor', 'rowBorderColor', 'rowClassName', 'rowClick', 'rowColor', 'rowContextMenu', 'rowDoubleClick', 'rowDragging', 'rowExpansion', 'rowStyle', 'scrollAreaProps', 'scrollEdge', 'scrollPosition', 'searchMode', 'searchQuery', 'searchableAccessors', 'selectableRowRules', 'selectedRecordIds', 'selectedRecords', 'selectionCheckboxProps', 'selectionCheckboxRules', 'selectionColumnClassName', 'selectionColumnStyle', 'selectionTrigger', 'shadow', 'sortIcons', 'sortMode', 'sortStatus', 'stickyHeader', 'stickyHeaderOffset', 'storeColumnsKey', 'striped', 'stripedColor', 'style', 'styles', 'ta', 'tableClassName', 'tableProps', 'tableRef', 'td', 'textSelectionDisabled', 'top', 'totalRecords', 'tt', 'verticalAlign', 'verticalSpacing', 'visibleFrom', 'w', 'withColumnBorders', 'withRowBorders', 'withTableBorder']
+        self._prop_names = ['id', 'allRecordsSelectionCheckboxProps', 'backgroundColor', 'bd', 'bdrs', 'bg', 'bga', 'bgp', 'bgr', 'bgsz', 'bodyRef', 'borderColor', 'borderRadius', 'bottom', 'c', 'cellClick', 'cellContextMenu', 'cellDoubleClick', 'childRowsAccessor', 'className', 'classNames', 'columns', 'customLoader', 'data', 'defaultColumnProps', 'defaultColumnRender', 'direction', 'disabledSelectionRowRules', 'display', 'emptyState', 'expandedRecordIds', 'fetching', 'ff', 'filterMode', 'filterValues', 'flex', 'fs', 'fw', 'fz', 'groupAggregations', 'groupBy', 'groups', 'h', 'height', 'hiddenFrom', 'highlightOnHover', 'highlightOnHoverColor', 'horizontalSpacing', 'idAccessor', 'inset', 'lastExpansionChange', 'lastFilterChange', 'lastRowDragChange', 'lastSelectionChange', 'lastSortChange', 'left', 'lh', 'loaderBackgroundBlur', 'loaderColor', 'loaderSize', 'loaderType', 'loadingText', 'locale', 'lts', 'm', 'mah', 'maw', 'maxHeight', 'mb', 'me', 'mih', 'minHeight', 'miw', 'ml', 'mr', 'ms', 'mt', 'mx', 'my', 'noHeader', 'noRecordsIcon', 'noRecordsText', 'opacity', 'p', 'page', 'pageSize', 'pageSizeOptions', 'pagination', 'paginationActiveBackgroundColor', 'paginationActiveTextColor', 'paginationMode', 'paginationSize', 'paginationWithControls', 'paginationWithEdges', 'pb', 'pe', 'pinFirstColumn', 'pinLastColumn', 'pl', 'pos', 'pr', 'ps', 'pt', 'px', 'py', 'radius', 'records', 'recordsPerPage', 'recordsPerPageLabel', 'recordsPerPageOptions', 'right', 'rowAttributes', 'rowBackgroundColor', 'rowBorderColor', 'rowClassName', 'rowClick', 'rowColor', 'rowContextMenu', 'rowDoubleClick', 'rowDragging', 'rowExpansion', 'rowStyle', 'scrollAreaProps', 'scrollEdge', 'scrollPosition', 'searchMode', 'searchQuery', 'searchableAccessors', 'selectableRowRules', 'selectedRecordIds', 'selectedRecords', 'selectionCheckboxProps', 'selectionCheckboxRules', 'selectionColumnClassName', 'selectionColumnStyle', 'selectionTrigger', 'shadow', 'sortIcons', 'sortMode', 'sortStatus', 'stickyHeader', 'stickyHeaderOffset', 'storeColumnsKey', 'striped', 'stripedColor', 'style', 'styles', 'ta', 'tableClassName', 'tableProps', 'tableRef', 'td', 'textSelectionDisabled', 'top', 'totalRecords', 'tt', 'verticalAlign', 'verticalSpacing', 'visibleFrom', 'w', 'withColumnBorders', 'withRowBorders', 'withTableBorder']
         self._valid_wildcard_attributes =            []
-        self.available_properties = ['id', 'allRecordsSelectionCheckboxProps', 'backgroundColor', 'bd', 'bdrs', 'bg', 'bga', 'bgp', 'bgr', 'bgsz', 'bodyRef', 'borderColor', 'borderRadius', 'bottom', 'c', 'cellClick', 'cellContextMenu', 'cellDoubleClick', 'childRowsAccessor', 'className', 'classNames', 'columns', 'customLoader', 'data', 'defaultColumnProps', 'defaultColumnRender', 'direction', 'disabledSelectionRowRules', 'display', 'emptyState', 'expandedRecordIds', 'fetching', 'ff', 'flex', 'fs', 'fw', 'fz', 'groupAggregations', 'groupBy', 'groups', 'h', 'height', 'hiddenFrom', 'highlightOnHover', 'highlightOnHoverColor', 'horizontalSpacing', 'idAccessor', 'inset', 'lastExpansionChange', 'lastRowDragChange', 'lastSelectionChange', 'lastSortChange', 'left', 'lh', 'loaderBackgroundBlur', 'loaderColor', 'loaderSize', 'loaderType', 'loadingText', 'locale', 'lts', 'm', 'mah', 'maw', 'maxHeight', 'mb', 'me', 'mih', 'minHeight', 'miw', 'ml', 'mr', 'ms', 'mt', 'mx', 'my', 'noHeader', 'noRecordsIcon', 'noRecordsText', 'opacity', 'p', 'page', 'pageSize', 'pageSizeOptions', 'pagination', 'paginationActiveBackgroundColor', 'paginationActiveTextColor', 'paginationMode', 'paginationSize', 'paginationWithControls', 'paginationWithEdges', 'pb', 'pe', 'pinFirstColumn', 'pinLastColumn', 'pl', 'pos', 'pr', 'ps', 'pt', 'px', 'py', 'radius', 'records', 'recordsPerPage', 'recordsPerPageLabel', 'recordsPerPageOptions', 'right', 'rowAttributes', 'rowBackgroundColor', 'rowBorderColor', 'rowClassName', 'rowClick', 'rowColor', 'rowContextMenu', 'rowDoubleClick', 'rowDragging', 'rowExpansion', 'rowStyle', 'scrollAreaProps', 'scrollEdge', 'scrollPosition', 'searchMode', 'searchQuery', 'searchableAccessors', 'selectableRowRules', 'selectedRecordIds', 'selectedRecords', 'selectionCheckboxProps', 'selectionCheckboxRules', 'selectionColumnClassName', 'selectionColumnStyle', 'selectionTrigger', 'shadow', 'sortIcons', 'sortMode', 'sortStatus', 'stickyHeader', 'stickyHeaderOffset', 'storeColumnsKey', 'striped', 'stripedColor', 'style', 'styles', 'ta', 'tableClassName', 'tableProps', 'tableRef', 'td', 'textSelectionDisabled', 'top', 'totalRecords', 'tt', 'verticalAlign', 'verticalSpacing', 'visibleFrom', 'w', 'withColumnBorders', 'withRowBorders', 'withTableBorder']
+        self.available_properties = ['id', 'allRecordsSelectionCheckboxProps', 'backgroundColor', 'bd', 'bdrs', 'bg', 'bga', 'bgp', 'bgr', 'bgsz', 'bodyRef', 'borderColor', 'borderRadius', 'bottom', 'c', 'cellClick', 'cellContextMenu', 'cellDoubleClick', 'childRowsAccessor', 'className', 'classNames', 'columns', 'customLoader', 'data', 'defaultColumnProps', 'defaultColumnRender', 'direction', 'disabledSelectionRowRules', 'display', 'emptyState', 'expandedRecordIds', 'fetching', 'ff', 'filterMode', 'filterValues', 'flex', 'fs', 'fw', 'fz', 'groupAggregations', 'groupBy', 'groups', 'h', 'height', 'hiddenFrom', 'highlightOnHover', 'highlightOnHoverColor', 'horizontalSpacing', 'idAccessor', 'inset', 'lastExpansionChange', 'lastFilterChange', 'lastRowDragChange', 'lastSelectionChange', 'lastSortChange', 'left', 'lh', 'loaderBackgroundBlur', 'loaderColor', 'loaderSize', 'loaderType', 'loadingText', 'locale', 'lts', 'm', 'mah', 'maw', 'maxHeight', 'mb', 'me', 'mih', 'minHeight', 'miw', 'ml', 'mr', 'ms', 'mt', 'mx', 'my', 'noHeader', 'noRecordsIcon', 'noRecordsText', 'opacity', 'p', 'page', 'pageSize', 'pageSizeOptions', 'pagination', 'paginationActiveBackgroundColor', 'paginationActiveTextColor', 'paginationMode', 'paginationSize', 'paginationWithControls', 'paginationWithEdges', 'pb', 'pe', 'pinFirstColumn', 'pinLastColumn', 'pl', 'pos', 'pr', 'ps', 'pt', 'px', 'py', 'radius', 'records', 'recordsPerPage', 'recordsPerPageLabel', 'recordsPerPageOptions', 'right', 'rowAttributes', 'rowBackgroundColor', 'rowBorderColor', 'rowClassName', 'rowClick', 'rowColor', 'rowContextMenu', 'rowDoubleClick', 'rowDragging', 'rowExpansion', 'rowStyle', 'scrollAreaProps', 'scrollEdge', 'scrollPosition', 'searchMode', 'searchQuery', 'searchableAccessors', 'selectableRowRules', 'selectedRecordIds', 'selectedRecords', 'selectionCheckboxProps', 'selectionCheckboxRules', 'selectionColumnClassName', 'selectionColumnStyle', 'selectionTrigger', 'shadow', 'sortIcons', 'sortMode', 'sortStatus', 'stickyHeader', 'stickyHeaderOffset', 'storeColumnsKey', 'striped', 'stripedColor', 'style', 'styles', 'ta', 'tableClassName', 'tableProps', 'tableRef', 'td', 'textSelectionDisabled', 'top', 'totalRecords', 'tt', 'verticalAlign', 'verticalSpacing', 'visibleFrom', 'w', 'withColumnBorders', 'withRowBorders', 'withTableBorder']
         self.available_wildcard_properties =            []
         _explicit_args = kwargs.pop('_explicit_args')
         _locals = locals()

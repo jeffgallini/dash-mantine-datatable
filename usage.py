@@ -27,14 +27,14 @@ except ImportError:  # pragma: no cover - optional demo dependency
     yf = None
 
 
-USE_LIVE_ICONIFY = os.environ.get("DMDT_USAGE_ENABLE_ICONIFY", "").strip() == "1"
+USE_LIVE_ICONIFY = os.environ.get("DMDT_USAGE_ENABLE_ICONIFY", "1").strip() != "0"
 USE_FULL_RUNTIME_DEMOS = (
-    os.environ.get("DMDT_USAGE_ENABLE_FULL_RUNTIME_DEMOS", "").strip() == "1"
+    os.environ.get("DMDT_USAGE_ENABLE_FULL_RUNTIME_DEMOS", "1").strip() != "0"
 )
 
 
 def DashIconify(*args, **kwargs):
-    """Return a safe live icon placeholder unless iconify is explicitly enabled."""
+    """Return live dash-iconify icons by default; set DMDT_USAGE_ENABLE_ICONIFY=0 for stubs."""
 
     if USE_LIVE_ICONIFY:
         return _DashIconifyComponent(*args, **kwargs)
@@ -4086,9 +4086,10 @@ def build_column_filtering_code():
         "table = (",
         "    dmdt.DataTable(",
         '        id="column-filtering-table",',
-        "        data=filtered_records,",
+        "        data=EMPLOYEES,",
         "        columns=COLUMN_FILTERING_BASE_COLUMNS,",
         '        emptyState="No employees match the current filters.",',
+        '        filterMode="client",',
         '        paginationMode="none",',
         "    )",
         "    .update_layout(",
@@ -4104,9 +4105,8 @@ def build_column_filtering_code():
         '            id="column-name-filter",',
         '            label="Employee",',
         '            placeholder="Search employees...",',
-        "            value=name_query,",
+        '            value="",',
         "        ),",
-        "        filtering=bool(name_query),",
         "    )",
         "    .update_columns(",
         '        selector="team",',
@@ -4115,12 +4115,11 @@ def build_column_filtering_code():
         '            id="column-team-filter",',
         '            label="Teams",',
         "            data=COLUMN_FILTERING_TEAM_OPTIONS,",
-        "            value=selected_teams,",
+        "            value=[],",
         '            comboboxProps={"withinPortal": False},',
         "            searchable=True,",
         "            clearable=True,",
         "        ),",
-        "        filtering=bool(selected_teams),",
         "    )",
         "    .update_columns(",
         '        selector="startDate",',
@@ -4130,7 +4129,7 @@ def build_column_filtering_code():
         '                dmc.DateInput(',
         '                    id="column-start-date-from-filter",',
         '                    label="Start date from",',
-        "                    value=start_date_range[0] if len(start_date_range) > 0 else None,",
+        "                    value=None,",
         '                    valueFormat="YYYY-MM-DD",',
         '                    placeholder="Earliest date",',
         '                    clearable=True,',
@@ -4139,7 +4138,7 @@ def build_column_filtering_code():
         '                dmc.DateInput(',
         '                    id="column-start-date-to-filter",',
         '                    label="Start date to",',
-        "                    value=start_date_range[1] if len(start_date_range) > 1 else None,",
+        "                    value=None,",
         '                    valueFormat="YYYY-MM-DD",',
         '                    placeholder="Latest date",',
         '                    clearable=True,',
@@ -4148,7 +4147,6 @@ def build_column_filtering_code():
         "            ],",
         '            gap="xs",',
         "        ),",
-        "        filtering=bool(start_date_range and any(start_date_range)),",
         '        filterPopoverProps={"width": 320},',
         "    )",
         "    .update_columns(",
@@ -4161,13 +4159,12 @@ def build_column_filtering_code():
         '                    id="column-score-filter",',
         "                    min=COLUMN_FILTERING_DEFAULT_SCORE_RANGE[0],",
         "                    max=COLUMN_FILTERING_DEFAULT_SCORE_RANGE[1],",
-        "                    value=score_range,",
+        "                    value=COLUMN_FILTERING_DEFAULT_SCORE_RANGE,",
         "                    minRange=5,",
         "                ),",
         "            ],",
         '            gap="xs",',
         "        ),",
-        "        filtering=score_range != COLUMN_FILTERING_DEFAULT_SCORE_RANGE,",
         '        filterPopoverProps={"width": 320},',
         "    )",
         "    .update_columns(",
@@ -4176,7 +4173,7 @@ def build_column_filtering_code():
         "        filter=dmc.RadioGroup(",
         '            id="column-status-filter",',
         '            label="Status",',
-        "            value=selected_status,",
+        '            value="all",',
         "            children=dmc.Stack(",
         "                [",
         '                    dmc.Radio(label="All", value="all"),',
@@ -4187,37 +4184,9 @@ def build_column_filtering_code():
         "                gap=6,",
         "            ),",
         "        ),",
-        '        filtering=selected_status not in (None, "all"),',
         '        filterPopoverProps={"width": 220},',
         "    )",
         ")",
-        "",
-        "@callback(",
-        '    Output("column-filtering-table", "data"),',
-        '    Output("column-filtering-table", "columns"),',
-        '    Input("column-name-filter", "value"),',
-        '    Input("column-team-filter", "value"),',
-        '    Input("column-start-date-from-filter", "value"),',
-        '    Input("column-start-date-to-filter", "value"),',
-        '    Input("column-score-filter", "value"),',
-        '    Input("column-status-filter", "value"),',
-        ")",
-        "def update_filtered_table(",
-        "    name_query,",
-        "    selected_teams,",
-        "    start_date_from,",
-        "    start_date_to,",
-        "    score_range,",
-        "    selected_status,",
-        "):",
-        "    table = make_column_filtering_demo_table(",
-        "        name_query=name_query,",
-        "        selected_teams=selected_teams,",
-        "        start_date_range=[start_date_from, start_date_to],",
-        "        score_range=score_range,",
-        "        selected_status=selected_status,",
-        "    )",
-        "    return table.data, table.columns",
     ]
     return "\n".join(lines)
 
@@ -4232,23 +4201,15 @@ def make_column_filtering_demo_table(
     selected_teams = selected_teams or []
     normalized_score_range = normalize_score_range(score_range)
     start_date_range = list(start_date_range or [])
-    start_date_filter_active = bool(start_date_range and any(start_date_range))
     status_filter_value = selected_status or "all"
-    filtered_records = filter_column_search_records(
-        EMPLOYEES,
-        name_query=name_query,
-        selected_teams=selected_teams,
-        start_date_range=start_date_range,
-        score_range=normalized_score_range,
-        selected_status=status_filter_value,
-    )
 
     table = (
         dmdt.DataTable(
             id="column-filtering-table",
-            data=filtered_records,
+            data=EMPLOYEES,
             columns=COLUMN_FILTERING_BASE_COLUMNS,
             emptyState="No employees match the current filters.",
+            filterMode="client",
             paginationMode="none",
         )
         .update_layout(
@@ -4276,7 +4237,6 @@ def make_column_filtering_demo_table(
             placeholder="Search employees...",
             value=name_query or "",
         ),
-        filtering=bool((name_query or "").strip()),
     ).update_columns(
         selector="team",
         width=180,
@@ -4291,7 +4251,6 @@ def make_column_filtering_demo_table(
             clearable=True,
             comboboxProps={"withinPortal": False},
         ),
-        filtering=bool(selected_teams),
         filterPopoverProps={"width": 280},
     ).update_columns(
         selector="startDate",
@@ -4321,7 +4280,6 @@ def make_column_filtering_demo_table(
             ],
             gap="xs",
         ),
-        filtering=start_date_filter_active,
         filterPopoverProps={"width": 320},
     ).update_columns(
         selector="deliveryScore",
@@ -4340,7 +4298,6 @@ def make_column_filtering_demo_table(
             ],
             gap="xs",
         ),
-        filtering=normalized_score_range != COLUMN_FILTERING_DEFAULT_SCORE_RANGE,
         filterPopoverProps={"width": 320},
     ).update_columns(
         selector="status",
@@ -4360,7 +4317,6 @@ def make_column_filtering_demo_table(
                 gap=6,
             ),
         ),
-        filtering=status_filter_value != "all",
         filterPopoverProps={"width": 240},
     )
 
@@ -5304,6 +5260,7 @@ def build_inline_edit_columns():
                 label="Tags",
                 data=INLINE_EDIT_TAG_OPTIONS,
                 searchable=True,
+                comboboxProps={"withinPortal": False},
             ),
         },
         {
@@ -5350,7 +5307,7 @@ def build_inline_edit_code():
         '                    dmc.Radio(label="Approved", value="Approved"),',
         "                ], gap=6),",
         '            ), "render": dmc.Badge("{category}", variant="light", color="blue")},',
-        '            {"accessor": "tags", "editable": True, "editor": dmc.MultiSelect(label="Tags", data=INLINE_EDIT_TAG_OPTIONS, searchable=True)},',
+        '            {"accessor": "tags", "editable": True, "editor": dmc.MultiSelect(label="Tags", data=INLINE_EDIT_TAG_OPTIONS, searchable=True, comboboxProps={"withinPortal": False})},',
         '            {"accessor": "reviewDate", "presentation": "date", "editable": True, "editor": dmc.DateInput(label="Review date", valueFormat="YYYY-MM-DD")},',
         '            {"accessor": "adjustment", "textAlign": "right", "editable": True, "editor": dmc.NumberInput(label="Adjustment", min=-2, max=6, step=1, hideControls=True)},',
         "        ],",
@@ -6760,7 +6717,7 @@ app.layout = dmc.MantineProvider(
                 ),
                 demo_section(
                     "10. Column searching and filtering",
-                    "Build column-level search and filter UIs with Dash Mantine Components, then feed the filtered records back through Dash callbacks.",
+                    "Build column-level search and filter UIs with Dash Mantine Components and let the table apply them client-side.",
                     dmc.Stack(
                         [
                             make_column_filtering_demo_table(),
@@ -6780,7 +6737,7 @@ app.layout = dmc.MantineProvider(
                     methods=["filter", "filtering", "filterPopoverProps"],
                     highlights=[
                         "Each column can own a purpose-built DMC control instead of forcing all filtering through a global toolbar.",
-                        "The callback rebuilds both `data` and `columns`, which lets the filter UI reflect active state visually.",
+                        "Filter controls are registered by the table, so their values can combine without a separate Dash callback.",
                         "The popover note is important when you embed Mantine inputs inside other overlays and want the stacking to stay predictable.",
                     ],
                 ),
@@ -7689,35 +7646,6 @@ def show_selected_composite_row_ids(selected_ids):
 
 
 @callback(
-    Output("column-filtering-table", "data"),
-    Output("column-filtering-table", "columns"),
-    Input("column-name-filter", "value"),
-    Input("column-team-filter", "value"),
-    Input("column-start-date-from-filter", "value"),
-    Input("column-start-date-to-filter", "value"),
-    Input("column-score-filter", "value"),
-    Input("column-status-filter", "value"),
-    prevent_initial_call=True,
-)
-def update_column_filtering_table(
-    name_query,
-    selected_teams,
-    start_date_from,
-    start_date_to,
-    score_range,
-    selected_status,
-):
-    table = make_column_filtering_demo_table(
-        name_query=name_query,
-        selected_teams=selected_teams,
-        start_date_range=[start_date_from, start_date_to],
-        score_range=score_range,
-        selected_status=selected_status,
-    )
-    return table.data, table.columns
-
-
-@callback(
     Output("table-properties-table", "withRowBorders"),
     Output("table-properties-table", "withColumnBorders"),
     Output("table-properties-table", "striped"),
@@ -7837,4 +7765,4 @@ def update_server_table(search_value, page, records_per_page, sort_status):
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=False, port = 65500)
