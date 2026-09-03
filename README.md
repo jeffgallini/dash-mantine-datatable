@@ -1,4 +1,4 @@
-# dash-mantine-datatable
+# dash-mantine-datatable 
 
 [![PyPI version](https://img.shields.io/pypi/v/dash-mantine-datatable.svg)](https://pypi.org/project/dash-mantine-datatable/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
