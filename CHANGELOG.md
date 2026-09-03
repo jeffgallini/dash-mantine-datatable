@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.0 - 2026-09-03
+
 ### Added
 
 - Great Docs site with user guide, recipes, and API reference, published to GitHub Pages.
