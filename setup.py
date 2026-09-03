@@ -41,6 +41,7 @@ setup(
         "docs": [
             "pdoc>=16,<17",
             "playwright>=1.49,<2",
+            "pygments>=2.18,<3",
         ],
     },
     classifiers=[
