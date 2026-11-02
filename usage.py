@@ -16,9 +16,11 @@ from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
 
+import dash as _dash_module
 import dash_mantine_components as dmc
 import dash_mantine_datatable as dmdt
 from dash import ALL, Dash, Input, Output, State, callback, callback_context, dcc, html, no_update
+from dash_mantine_datatable._mantine_support import assert_dash_supports_dmc3, major_version
 from dash_iconify import DashIconify as _DashIconifyComponent
 
 try:
@@ -5850,6 +5852,9 @@ def make_api_reference_section():
         gap="xl",
     )
 
+
+if major_version(getattr(dmc, "__version__", None)) >= 3:
+    assert_dash_supports_dmc3(_dash_module)
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server

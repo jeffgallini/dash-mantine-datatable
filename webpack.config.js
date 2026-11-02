@@ -5,7 +5,18 @@ const packagejson = require('./package.json');
 
 const dashLibraryName = packagejson.name.replace(/-/g, '_');
 
+const mantineDatatableAliases = {
+    '8': path.resolve(__dirname, 'node_modules/mantine-datatable'),
+    '9': path.resolve(__dirname, 'node_modules/mantine-datatable-v9'),
+};
+
 module.exports = (env, argv) => {
+    const mantineMajor = String((env && env.mantine) || '8');
+    if (!Object.prototype.hasOwnProperty.call(mantineDatatableAliases, mantineMajor)) {
+        throw new Error(
+            `Unsupported Mantine major "${mantineMajor}". Pass --env mantine=8 or --env mantine=9.`
+        );
+    }
 
     let mode;
 
@@ -29,7 +40,7 @@ module.exports = (env, argv) => {
     let filename = (overrides.output || {}).filename;
     if(!filename) {
         const modeSuffix = mode === 'development' ? 'dev' : 'min';
-        filename = `${dashLibraryName}.${modeSuffix}.js`;
+        filename = `${dashLibraryName}.v${mantineMajor}.${modeSuffix}.js`;
     }
 
     const entry = overrides.entry || {main: './src/lib/index.js'};
@@ -45,9 +56,31 @@ module.exports = (env, argv) => {
         '@mantine/hooks': 'MantineHooks',
     });
 
+    const bundlesMantine =
+        overrides.externals === undefined &&
+        Object.prototype.hasOwnProperty.call(overrides, 'externals');
+    const datatablePackage = mantineDatatableAliases[mantineMajor];
+    const alias = {
+        'mantine-datatable$': datatablePackage,
+        'mantine-datatable/styles.layer.css': path.join(
+            datatablePackage,
+            'dist',
+            'styles.layer.css'
+        ),
+        'react/jsx-runtime': path.resolve(__dirname, 'src/lib/jsx-runtime-shim.js'),
+        'react/jsx-dev-runtime': path.resolve(__dirname, 'src/lib/jsx-runtime-shim.js'),
+    };
+    if (bundlesMantine && mantineMajor === '9') {
+        alias['@mantine/core'] = path.resolve(__dirname, 'node_modules/@mantine/core-v9');
+        alias['@mantine/hooks'] = path.resolve(__dirname, 'node_modules/@mantine/hooks-v9');
+    }
+
     return {
         mode,
         entry,
+        resolve: {
+            alias,
+        },
         output: {
             path: path.resolve(__dirname, dashLibraryName),
             chunkFilename: '[name].js',

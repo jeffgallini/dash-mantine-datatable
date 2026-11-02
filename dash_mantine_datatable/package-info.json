@@ -1,6 +1,6 @@
 {
   "name": "dash-mantine-datatable",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Mantine DataTable for Dash applications.",
   "repository": {
     "type": "git",
@@ -27,7 +27,8 @@
     "@mantine/core": "8.3.14",
     "@mantine/hooks": "8.3.14",
     "clsx": "^2.1.1",
-    "mantine-datatable": "^8.3.13",
+    "mantine-datatable": "8.3.13",
+    "mantine-datatable-v9": "npm:mantine-datatable@9.4.0",
     "ramda": "^0.26.1"
   },
   "devDependencies": {
@@ -46,9 +47,9 @@
     "eslint-plugin-import": "^2.18.0",
     "eslint-plugin-react": "^7.14.2",
     "prop-types": "^15.8.1",
-    "react": "18.2.0",
+    "react": "19.2.4",
     "react-docgen": "^5.4.3",
-    "react-dom": "18.2.0",
+    "react-dom": "19.2.4",
     "style-loader": "^3.3.3",
     "webpack": "^5.84.1",
     "webpack-cli": "^5.1.1",

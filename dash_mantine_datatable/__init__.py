@@ -40,7 +40,18 @@ from typing import Any
 
 import dash as _dash
 
+# Dash serves component scripts in import order. This bundle reads
+# window.MantineCore while it is loading, so DMC has to be registered first.
+# Importing the package before dash-mantine-components otherwise leaves the page blank.
+import dash_mantine_components  # noqa: F401
+
 from .DataTable import DataTable as _GeneratedDataTable
+from ._mantine_support import (
+    assert_dash_supports_dmc3,
+    installed_distribution_version,
+    js_dist_for_dmc_version,
+    major_version,
+)
 
 _PACKAGE_INFO_PATH = Path(__file__).with_name("package-info.json")
 package = json.loads(_PACKAGE_INFO_PATH.read_text(encoding="utf-8"))
@@ -53,17 +64,11 @@ if not hasattr(_dash, "__plotly_dash") and not hasattr(_dash, "development"):
         "'dash.py' shadowing the real Dash package."
     )
 
-_js_dist = [
-    {
-        "relative_package_path": "dash_mantine_datatable.min.js",
-        "namespace": package_name,
-    },
-    {
-        "relative_package_path": "dash_mantine_datatable.min.js.map",
-        "namespace": package_name,
-        "dynamic": True,
-    },
-]
+_dmc_version = installed_distribution_version("dash-mantine-components")
+if major_version(_dmc_version) >= 3:
+    assert_dash_supports_dmc3(_dash)
+
+_js_dist = js_dist_for_dmc_version(_dmc_version, package_name)
 _css_dist: list[dict[str, Any]] = []
 
 _PROP_ALIASES = {

@@ -1,5 +1,7 @@
-include dash_mantine_datatable/dash_mantine_datatable.min.js
-include dash_mantine_datatable/dash_mantine_datatable.min.js.map
+include dash_mantine_datatable/dash_mantine_datatable.v8.min.js
+include dash_mantine_datatable/dash_mantine_datatable.v8.min.js.map
+include dash_mantine_datatable/dash_mantine_datatable.v9.min.js
+include dash_mantine_datatable/dash_mantine_datatable.v9.min.js.map
 include dash_mantine_datatable/metadata.json
 include dash_mantine_datatable/package-info.json
 include dash_mantine_datatable/*.txt

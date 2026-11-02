@@ -120,6 +120,10 @@ table = (
 | Large-data strategy | Client/server pagination, sorting, and search | Additional row models and enterprise features |
 | Best fit | Mantine-native Dash apps that want polished tables without AG Grid complexity | Data-heavy apps that need spreadsheet-grade grid mechanics |
 
+## Compatibility
+
+One install supports both current Dash Mantine stacks. The package loads `dash_mantine_datatable.v8.min.js` for dash-mantine-components 2.x and `dash_mantine_datatable.v9.min.js` for 3.x. With dash-mantine-components 3, import this package before creating the app so it can select React 19.2.4. That stack also requires Dash 4.5 or newer.
+
 ## Local development
 
 ```bash
@@ -129,6 +133,8 @@ npm run build
 python -m pytest
 python usage.py
 ```
+
+`tests/requirements.txt` installs Dash 4.5 and dash-mantine-components 3. Repeat the pytest run with `tests/requirements-dmc2.txt` to cover dash-mantine-components 2.
 
 ## Publishing
 

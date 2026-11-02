@@ -13,6 +13,7 @@
 
 ### Changed
 
+- Load a Mantine 8 or Mantine 9 JavaScript bundle based on the installed `dash-mantine-components` major version. DMC 3 also selects React 19.2.4 and requires Dash 4.5 or newer.
 - README refreshed with docs link, badges, feature overview, and example media.
 - GitHub Pages docs workflow now builds the Quarto Great Docs site instead of pdoc-only output.
 
