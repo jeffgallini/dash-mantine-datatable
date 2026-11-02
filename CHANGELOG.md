@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.0 - 2026-11-02
+
+- Supporting React 19, maintaining React 18
+
 ## 1.0.0 - 2026-09-03
 
 ### Added
