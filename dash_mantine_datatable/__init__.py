@@ -40,6 +40,11 @@ from typing import Any
 
 import dash as _dash
 
+# Dash serves component scripts in import order. This bundle reads
+# window.MantineCore while it is loading, so DMC has to be registered first.
+# Importing the package before dash-mantine-components otherwise leaves the page blank.
+import dash_mantine_components  # noqa: F401
+
 from .DataTable import DataTable as _GeneratedDataTable
 from ._mantine_support import (
     assert_dash_supports_dmc3,
