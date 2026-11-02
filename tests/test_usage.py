@@ -153,8 +153,13 @@ def test_render_component(dash_duo):
     )
     active = bundle_name_for_dmc_version(getattr(dmc, "__version__", None))
     inactive = BUNDLE_V9 if active == BUNDLE_V8 else BUNDLE_V8
-    assert any(active in source for source in sources)
-    assert all(inactive not in source for source in sources)
+    # Dash inserts a version fingerprint after the first dot, so
+    # dash_mantine_datatable.v9.min.js is served as
+    # dash_mantine_datatable.v0_1_0m<hash>.v9.min.js.
+    active_suffix = "." + active.split(".", 1)[1]
+    inactive_suffix = "." + inactive.split(".", 1)[1]
+    assert any(active_suffix in source for source in sources)
+    assert all(inactive_suffix not in source for source in sources)
 
     dash_duo.wait_for_contains_text(
         "#expanding-rows-table",
