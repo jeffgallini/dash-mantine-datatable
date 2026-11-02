@@ -19,7 +19,8 @@
     "build:backends": "dash-generate-components ./src/lib/components dash_mantine_datatable -p package-info.json --ignore \\.test\\.",
     "build:backends-activated": "(. venv/bin/activate || venv\\scripts\\activate && npm run build:backends)",
     "build": "npm run build:js && npm run build:backends",
-    "build:activated": "npm run build:js && npm run build:backends-activated"
+    "build:activated": "npm run build:js && npm run build:backends-activated",
+    "postinstall": "patch-package"
   },
   "author": "Jeff Gallini <gallinij@gmail.com>",
   "license": "MIT",
@@ -45,10 +46,11 @@
     "eslint-config-prettier": "^6.0.0",
     "eslint-plugin-import": "^2.18.0",
     "eslint-plugin-react": "^7.14.2",
+    "patch-package": "^8.0.1",
     "prop-types": "^15.8.1",
-    "react": "18.2.0",
+    "react": "^19.0.0",
     "react-docgen": "^5.4.3",
-    "react-dom": "18.2.0",
+    "react-dom": "^19.0.0",
     "style-loader": "^3.3.3",
     "webpack": "^5.84.1",
     "webpack-cli": "^5.1.1",
