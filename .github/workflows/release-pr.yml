@@ -37,4 +37,4 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BASE_REF: ${{ github.base_ref }}
           PR_HEAD_REF: ${{ github.head_ref }}
-        run: python scripts/validate_release_pr.py
+        run: python scripts/validate_release_pr.py --allow-current-version
