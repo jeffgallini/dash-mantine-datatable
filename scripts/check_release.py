@@ -23,13 +23,15 @@ SDIST_REQUIRED_PATHS = {
     "LICENSE",
     "dash_mantine_datatable/metadata.json",
     "dash_mantine_datatable/package-info.json",
-    "dash_mantine_datatable/dash_mantine_datatable.min.js",
+    "dash_mantine_datatable/dash_mantine_datatable.v8.min.js",
+    "dash_mantine_datatable/dash_mantine_datatable.v9.min.js",
 }
 
 WHEEL_REQUIRED_PATHS = {
     "dash_mantine_datatable/metadata.json",
     "dash_mantine_datatable/package-info.json",
-    "dash_mantine_datatable/dash_mantine_datatable.min.js",
+    "dash_mantine_datatable/dash_mantine_datatable.v8.min.js",
+    "dash_mantine_datatable/dash_mantine_datatable.v9.min.js",
 }
 
 

@@ -1,7 +1,13 @@
 from contextlib import suppress
 
+import dash_mantine_components as dmc
 import pytest
 from dash.testing.application_runners import import_app
+from dash_mantine_datatable._mantine_support import (
+    BUNDLE_V8,
+    BUNDLE_V9,
+    bundle_name_for_dmc_version,
+)
 from selenium import webdriver
 from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 
@@ -39,3 +45,26 @@ def test_render_component(dash_duo):
 
     overview_table = dash_duo.find_element('#overview-table')
     assert overview_table is not None
+
+    sources = dash_duo.driver.execute_script(
+        "return Array.from(document.querySelectorAll('script[src]')).map(node => node.src);"
+    )
+    active = bundle_name_for_dmc_version(getattr(dmc, "__version__", None))
+    inactive = BUNDLE_V9 if active == BUNDLE_V8 else BUNDLE_V8
+    assert any(active in source for source in sources)
+    assert all(inactive not in source for source in sources)
+
+    dash_duo.wait_for_contains_text(
+        "#expanding-rows-table",
+        "Owns the deployment pipeline and release tooling.",
+    )
+
+    filter_icon = dash_duo.find_element(
+        "#column-filtering-table .mantine-datatable-header-cell-filter-action-icon"
+    )
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});",
+        filter_icon,
+    )
+    filter_icon.click()
+    dash_duo.wait_for_element("#column-name-filter")

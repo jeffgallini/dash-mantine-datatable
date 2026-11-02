@@ -7,6 +7,8 @@ npm install --legacy-peer-deps
 python -m pip install -r requirements.txt -r tests/requirements.txt
 ```
 
+`tests/requirements.txt` covers Dash 4.5 with dash-mantine-components 3. Use `tests/requirements-dmc2.txt` for a second environment on dash-mantine-components 2.
+
 ## Common tasks
 
 ```powershell

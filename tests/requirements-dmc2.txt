@@ -1,0 +1,4 @@
+dash[testing]>=4.5.0,<5
+dash-mantine-components>=2.6.0,<3
+dash-iconify
+pytest>=8.0.0
